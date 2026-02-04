@@ -1,0 +1,15 @@
+venv/
+.DS_Store
+__pycache__/
+.ipynb_checkpoints/
+mdpdf.log
+token.js
+credentials.js
+mdpdf.log
+questions.pdf
+token.js
+OpenSans-Regular.pkl
+*.env
+*.txt
+*.pdf
+*.json
