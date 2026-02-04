@@ -22,12 +22,16 @@
                 <form id="questionForm">
                     <div class="form-group">
                         <label for="subject">Subject *</label>
-                        <input type="text" id="subject" required placeholder="e.g., Data Structures">
+                        <select id="subject" required>
+                            <option value="">Loading subjects...</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
                         <label for="topic">Topic *</label>
-                        <input type="text" id="topic" required placeholder="e.g., Arrays">
+                        <select id="topic" required disabled>
+                            <option value="">Select a subject first</option>
+                        </select>
                     </div>
 
                     <div class="form-row">
