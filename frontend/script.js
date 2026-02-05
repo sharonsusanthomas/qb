@@ -68,7 +68,22 @@ subjectSelect.addEventListener('change', (e) => {
 // Load subjects on page load
 loadSubjects();
 
-// Form submission
+// Tab switching
+function switchTab(mode) {
+    // Buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab-btn[onclick="switchTab('${mode}')"]`).classList.add('active');
+
+    // Content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    if (mode === 'standard') {
+        document.getElementById('standardMode').classList.add('active');
+    } else {
+        document.getElementById('contextMode').classList.add('active');
+    }
+}
+
+// Standard Form submission
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -85,39 +100,85 @@ form.addEventListener('submit', async (e) => {
         marks: parseInt(document.getElementById('marks').value)
     };
 
+    await handleGeneration(`${API_BASE_URL}/questions/generate`, formData, generateBtn, btnText, loader, false);
+});
+
+// PDF Form submission
+const pdfForm = document.getElementById('pdfForm');
+const pdfGenerateBtn = document.getElementById('pdfGenerateBtn');
+const pdfBtnText = pdfGenerateBtn.querySelector('.btn-text');
+const pdfLoader = pdfGenerateBtn.querySelector('.loader');
+
+pdfForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('pdfFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        displayError("Please upload a PDF file");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('subject', document.getElementById('pdfSubject').value);
+    formData.append('topic', document.getElementById('pdfTopic').value);
+    formData.append('bloom_level', document.getElementById('pdfBloomLevel').value);
+    formData.append('difficulty', document.getElementById('pdfDifficulty').value);
+    formData.append('marks', document.getElementById('pdfMarks').value);
+
+    // Add custom prompt if exists
+    const customPrompt = document.getElementById('customPrompt').value;
+    if (customPrompt) {
+        formData.append('custom_prompt', customPrompt);
+    } else {
+        formData.append('custom_prompt', '');
+    }
+
+    await handleGeneration(`${API_BASE_URL}/generate-from-notes/`, formData, pdfGenerateBtn, pdfBtnText, pdfLoader, true);
+});
+
+async function handleGeneration(url, data, btn, btnTextElem, loaderElem, isMultipart) {
     // Show loading state
-    generateBtn.disabled = true;
-    btnText.style.display = 'none';
-    loader.style.display = 'block';
+    btn.disabled = true;
+    btnTextElem.style.display = 'none';
+    loaderElem.style.display = 'block';
     resultSection.style.display = 'none';
     errorSection.style.display = 'none';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/questions/generate`, {
+        const options = {
             method: 'POST',
-            headers: {
+            body: isMultipart ? data : JSON.stringify(data)
+        };
+
+        // Only add Content-Type for JSON, fetch adds multipart headers automatically
+        if (!isMultipart) {
+            options.headers = {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
+            };
+        }
+
+        const response = await fetch(url, options);
 
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.detail || 'Failed to generate question');
         }
 
-        const data = await response.json();
-        displayQuestion(data);
+        const result = await response.json();
+        displayQuestion(result);
 
     } catch (error) {
         displayError(error.message);
     } finally {
         // Reset button state
-        generateBtn.disabled = false;
-        btnText.style.display = 'inline';
-        loader.style.display = 'none';
+        btn.disabled = false;
+        btnTextElem.style.display = 'inline';
+        loaderElem.style.display = 'none';
     }
-});
+}
 
 function displayQuestion(data) {
     // Show result section

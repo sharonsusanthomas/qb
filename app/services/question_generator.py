@@ -79,6 +79,70 @@ class QuestionGeneratorService:
             ),
             created_at=db_question.created_at
         )
+
+    def generate_question_from_context(
+        self, 
+        context: str,
+        request: QuestionGenerateRequest,
+        custom_prompt: str = ""
+    ) -> QuestionResponse:
+        """
+        Generate a question based on provided context text
+        """
+        # Build prompt with context
+        prompt = self.prompt_builder.build_context_question_prompt(
+            context=context,
+            subject=request.subject,
+            topic=request.topic,
+            bloom_level=request.bloom_level,
+            difficulty=request.difficulty,
+            marks=request.marks,
+            custom_prompt=custom_prompt
+        )
+        
+        # Generate question using LLM
+        question_text = llm_client.generate(prompt)
+        
+        # Validate question (reuse existing validator)
+        # Note: Validation might be stricter/looser depending on context, 
+        # but basic checks usually apply.
+        is_valid, validation_message = self.validator.validate_question(
+            question_text=question_text,
+            bloom_level=request.bloom_level,
+            marks=request.marks
+        )
+        
+        if not is_valid:
+            # Retry once
+            question_text = llm_client.generate(prompt)
+        
+        # Save to database
+        db_question = Question(
+            subject=request.subject,
+            topic=request.topic,
+            bloom_level=request.bloom_level,
+            difficulty=request.difficulty,
+            marks=request.marks,
+            question_text=question_text
+        )
+        
+        self.db.add(db_question)
+        self.db.commit()
+        self.db.refresh(db_question)
+        
+        return QuestionResponse(
+            id=db_question.id,
+            question_text=db_question.question_text,
+            status=db_question.status,
+            metadata=QuestionMetadata(
+                subject=db_question.subject,
+                topic=db_question.topic,
+                bloom_level=db_question.bloom_level,
+                difficulty=db_question.difficulty,
+                marks=db_question.marks
+            ),
+            created_at=db_question.created_at
+        )
     
     def get_question_by_id(self, question_id: int) -> QuestionResponse | None:
         """Get a question by ID"""

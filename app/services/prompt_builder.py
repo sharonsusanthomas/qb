@@ -51,6 +51,31 @@ Generation Rules (Mandatory):
 Generate one examination question strictly following the above constraints:"""
 
 
+
+CONTEXT_PROMPT_TEMPLATE = """You are an Academic Question Generation Engine.
+
+Your task is to generate ONE examination question based STRICTLY on the provided study notes/context.
+
+Context:
+{context}
+
+Requirements:
+- Subject: {subject}
+- Topic: {topic}
+- Bloom's Level: {bloom_level}
+- Difficulty: {difficulty}
+- Marks: {marks}
+- Additional Instructions: {custom_prompt}
+
+Mandatory Constraints:
+1. The question must be answerable ONLY using the information from the provided Context.
+2. If the context does not contain enough information for the specific topic, focus on what is available in the context related to the subject.
+3. Follow the Bloom's Taxonomy level strictly.
+4. Output ONLY the question text. No answers, no explanations.
+
+Generate the question:"""
+
+
 class PromptBuilder:
     """Builds canonical prompts for question generation"""
     
@@ -70,6 +95,32 @@ class PromptBuilder:
             difficulty=difficulty.value,
             marks=marks
         )
+
+    @staticmethod
+    def build_context_question_prompt(
+        context: str,
+        subject: str,
+        topic: str,
+        bloom_level: BloomLevel,
+        difficulty: Difficulty,
+        marks: int,
+        custom_prompt: str = ""
+    ) -> str:
+        """Build a prompt for question generation from context"""
+        # Truncate context if too long (rough safety limit)
+        max_chars = 15000
+        safe_context = context[:max_chars] + "..." if len(context) > max_chars else context
+        
+        return CONTEXT_PROMPT_TEMPLATE.format(
+            context=safe_context,
+            subject=subject,
+            topic=topic,
+            bloom_level=bloom_level.value,
+            difficulty=difficulty.value,
+            marks=marks,
+            custom_prompt=custom_prompt
+        )
+
     
     @staticmethod
     def get_bloom_verbs(bloom_level: BloomLevel) -> list[str]:

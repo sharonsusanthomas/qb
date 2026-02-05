@@ -22,57 +22,130 @@
         <main>
             <!-- Question Generation Form -->
             <section class="card">
-                <h2>Generate Question</h2>
-                <form id="questionForm">
-                    <div class="form-group">
-                        <label for="subject">Subject *</label>
-                        <select id="subject" required>
-                            <option value="">Loading subjects...</option>
-                        </select>
-                    </div>
+                <h2>Generate New Question</h2>
 
-                    <div class="form-group">
-                        <label for="topic">Topic *</label>
-                        <select id="topic" required disabled>
-                            <option value="">Select a subject first</option>
-                        </select>
-                    </div>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('standard')">Standard Mode</button>
+                    <button class="tab-btn" onclick="switchTab('context')">Files & Notes Mode</button>
+                </div>
 
-                    <div class="form-row">
+                <!-- Standard Form -->
+                <div id="standardMode" class="tab-content active">
+                    <form id="questionForm">
                         <div class="form-group">
-                            <label for="bloomLevel">Bloom's Level *</label>
-                            <select id="bloomLevel" required>
-                                <option value="">Select Level</option>
-                                <option value="RBT1">RBT1 - Remember</option>
-                                <option value="RBT2">RBT2 - Understand</option>
-                                <option value="RBT3">RBT3 - Apply</option>
-                                <option value="RBT4">RBT4 - Analyze</option>
-                                <option value="RBT5">RBT5 - Evaluate</option>
-                                <option value="RBT6">RBT6 - Create</option>
+                            <label for="subject">Subject *</label>
+                            <select id="subject" required>
+                                <option value="">Loading subjects...</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="difficulty">Difficulty *</label>
-                            <select id="difficulty" required>
-                                <option value="">Select Difficulty</option>
-                                <option value="EASY">Easy</option>
-                                <option value="MEDIUM">Medium</option>
-                                <option value="HARD">Hard</option>
+                            <label for="topic">Topic *</label>
+                            <select id="topic" required disabled>
+                                <option value="">Select a subject first</option>
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label for="marks">Marks *</label>
-                            <input type="number" id="marks" required min="1" max="100" placeholder="15">
-                        </div>
-                    </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bloomLevel">Bloom's Level *</label>
+                                <select id="bloomLevel" required>
+                                    <option value="">Select Level</option>
+                                    <option value="RBT1">RBT1 - Remember</option>
+                                    <option value="RBT2">RBT2 - Understand</option>
+                                    <option value="RBT3">RBT3 - Apply</option>
+                                    <option value="RBT4">RBT4 - Analyze</option>
+                                    <option value="RBT5">RBT5 - Evaluate</option>
+                                    <option value="RBT6">RBT6 - Create</option>
+                                </select>
+                            </div>
 
-                    <button type="submit" class="btn-primary" id="generateBtn">
-                        <span class="btn-text">Generate Question</span>
-                        <span class="loader" style="display: none;"></span>
-                    </button>
-                </form>
+                            <div class="form-group">
+                                <label for="difficulty">Difficulty *</label>
+                                <select id="difficulty" required>
+                                    <option value="">Select Difficulty</option>
+                                    <option value="EASY">Easy</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HARD">Hard</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="marks">Marks *</label>
+                                <input type="number" id="marks" required min="1" max="100" placeholder="15">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="generateBtn">
+                            <span class="btn-text">Generate Question</span>
+                            <span class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Context Form -->
+                <div id="contextMode" class="tab-content">
+                    <form id="pdfForm">
+                        <div class="form-group">
+                            <label for="pdfFile">Upload PDF Notes/Chapter *</label>
+                            <input type="file" id="pdfFile" accept=".pdf" required>
+                            <small style="color: var(--text-muted);">Upload a PDF containing the study material or
+                                chapter content.</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="pdfSubject">Subject</label>
+                                <input type="text" id="pdfSubject" placeholder="e.g. Computer Science" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="pdfTopic">Topic</label>
+                                <input type="text" id="pdfTopic" placeholder="e.g. Neural Networks" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="pdfBloomLevel">Bloom's Level *</label>
+                                <select id="pdfBloomLevel" required>
+                                    <option value="">Select Level</option>
+                                    <option value="RBT1">RBT1 - Remember</option>
+                                    <option value="RBT2">RBT2 - Understand</option>
+                                    <option value="RBT3">RBT3 - Apply</option>
+                                    <option value="RBT4">RBT4 - Analyze</option>
+                                    <option value="RBT5">RBT5 - Evaluate</option>
+                                    <option value="RBT6">RBT6 - Create</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pdfDifficulty">Difficulty *</label>
+                                <select id="pdfDifficulty" required>
+                                    <option value="">Select Difficulty</option>
+                                    <option value="EASY">Easy</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HARD">Hard</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pdfMarks">Marks *</label>
+                                <input type="number" id="pdfMarks" required min="1" max="100" placeholder="15">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="customPrompt">Custom Instructions (Optional)</label>
+                            <input type="text" id="customPrompt"
+                                placeholder="e.g. Focus on the definitions on page 3...">
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="pdfGenerateBtn">
+                            <span class="btn-text">Generate from Context</span>
+                            <span class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+                </div>
             </section>
 
             <!-- Generated Question Display -->
