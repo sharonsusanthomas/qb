@@ -19,6 +19,12 @@ class Difficulty(str, Enum):
     HARD = "HARD"
 
 
+class QuestionStatus(str, Enum):
+    DEDUPE_PENDING = "DEDUPE_PENDING"
+    DEDUPE_APPROVED = "DEDUPE_APPROVED"
+    APPROVED = "APPROVED"
+
+
 # Request Schemas
 class QuestionGenerateRequest(BaseModel):
     subject: str = Field(..., min_length=1, max_length=255, description="Subject name")
@@ -76,6 +82,7 @@ class QuestionMetadata(BaseModel):
 class QuestionResponse(BaseModel):
     id: int
     question_text: str
+    status: QuestionStatus
     metadata: QuestionMetadata
     created_at: datetime
     

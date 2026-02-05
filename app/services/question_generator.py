@@ -69,6 +69,7 @@ class QuestionGeneratorService:
         return QuestionResponse(
             id=db_question.id,
             question_text=db_question.question_text,
+            status=db_question.status,
             metadata=QuestionMetadata(
                 subject=db_question.subject,
                 topic=db_question.topic,
@@ -89,6 +90,7 @@ class QuestionGeneratorService:
         return QuestionResponse(
             id=question.id,
             question_text=question.question_text,
+            status=question.status,
             metadata=QuestionMetadata(
                 subject=question.subject,
                 topic=question.topic,
@@ -122,6 +124,7 @@ class QuestionGeneratorService:
             QuestionResponse(
                 id=q.id,
                 question_text=q.question_text,
+                status=q.status,
                 metadata=QuestionMetadata(
                     subject=q.subject,
                     topic=q.topic,

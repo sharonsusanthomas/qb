@@ -20,6 +20,12 @@ class Difficulty(str, enum.Enum):
     HARD = "HARD"
 
 
+class QuestionStatus(str, enum.Enum):
+    DEDUPE_PENDING = "DEDUPE_PENDING"
+    DEDUPE_APPROVED = "DEDUPE_APPROVED"
+    APPROVED = "APPROVED"
+
+
 class Question(Base):
     __tablename__ = "questions"
     
@@ -30,6 +36,7 @@ class Question(Base):
     difficulty = Column(Enum(Difficulty), nullable=False, index=True)
     marks = Column(Integer, nullable=False)
     question_text = Column(Text, nullable=False)
+    status = Column(Enum(QuestionStatus), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     # Relationship

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Question Dashboard</h1>
+            <p>Manage and review generated questions</p>
+            <nav>
+                <a href="index.html" class="nav-link">Generate Questions</a>
+                <a href="dashboard.html" class="nav-link active">Dashboard</a>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Status Cards -->
+            <div class="stats-grid">
+                <div class="stat-card pending" onclick="openModal('DEDUPE_PENDING')">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-content">
+                        <h3 id="pendingCount">0</h3>
+                        <p>Pending Deduplication</p>
+                    </div>
+                </div>
+
+                <div class="stat-card dedupe" onclick="openModal('DEDUPE_APPROVED')">
+                    <div class="stat-icon">🔍</div>
+                    <div class="stat-content">
+                        <h3 id="dedupeCount">0</h3>
+                        <p>Dedupe Approved</p>
+                    </div>
+                </div>
+
+                <div class="stat-card approved" onclick="openModal('APPROVED')">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <h3 id="approvedCount">0</h3>
+                        <p>Approved Questions</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="questionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Questions</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="questionList"></div>
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <!-- Action buttons will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
