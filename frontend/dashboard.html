@@ -38,12 +38,33 @@
                     </div>
                 </div>
 
+                <div class="stat-card duplicate" onclick="openModal('DUPLICATE_FLAGGED')">
+                    <div class="stat-icon">🚩</div>
+                    <div class="stat-content">
+                        <h3 id="duplicateCount">0</h3>
+                        <p>Flagged Duplicates</p>
+                    </div>
+                </div>
+
                 <div class="stat-card approved" onclick="openModal('APPROVED')">
                     <div class="stat-icon">✅</div>
                     <div class="stat-content">
                         <h3 id="approvedCount">0</h3>
                         <p>Approved Questions</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- New Activity Log Container -->
+            <div class="card" style="margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0;">📡 Real-time Activity Log</h2>
+                    <button class="btn-secondary" onclick="clearLogs()"
+                        style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Clear</button>
+                </div>
+                <div id="activityLog"
+                    style="background: var(--bg); height: 200px; overflow-y: auto; border-radius: 0.5rem; padding: 1rem; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; border: 1px solid var(--border);">
+                    <div style="color: var(--text-muted)">System initialized. Waiting for activity...</div>
                 </div>
             </div>
         </main>
@@ -61,6 +82,22 @@
             </div>
             <div class="modal-footer" id="modalFooter">
                 <!-- Action buttons will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal" style="display:none; z-index: 1001;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>📊 AI Similarity Analysis</h2>
+                <span class="close" onclick="closeReportModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="reportModalBody" style="padding: 2rem;">
+                <!-- Report content will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeReportModal()">Close Analysis</button>
             </div>
         </div>
     </div>

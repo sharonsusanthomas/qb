@@ -27,6 +27,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('standard')">Standard Mode</button>
                     <button class="tab-btn" onclick="switchTab('context')">Files & Notes Mode</button>
+                    <button class="tab-btn" onclick="switchTab('manual')">Manual Input Mode</button>
                 </div>
 
                 <!-- Standard Form -->
@@ -146,11 +147,69 @@
                         </button>
                     </form>
                 </div>
+
+                <!-- Manual Mode Form -->
+                <div id="manualMode" class="tab-content">
+                    <form id="manualForm">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="mSubject">Subject *</label>
+                                <input type="text" id="mSubject" placeholder="e.g. Data Science" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="mTopic">Topic *</label>
+                                <input type="text" id="mTopic" placeholder="e.g. Regression" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mBloomLevel">Bloom's Level *</label>
+                                <select id="mBloomLevel" required>
+                                    <option value="">Select Level</option>
+                                    <option value="RBT1">RBT1 - Remember</option>
+                                    <option value="RBT2">RBT2 - Understand</option>
+                                    <option value="RBT3">RBT3 - Apply</option>
+                                    <option value="RBT4">RBT4 - Analyze</option>
+                                    <option value="RBT5">RBT5 - Evaluate</option>
+                                    <option value="RBT6">RBT6 - Create</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="mDifficulty">Difficulty *</label>
+                                <select id="mDifficulty" required>
+                                    <option value="">Select Difficulty</option>
+                                    <option value="EASY">Easy</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HARD">Hard</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="mMarks">Marks *</label>
+                                <input type="number" id="mMarks" required min="1" max="100" placeholder="15">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mQuestionText">Your Question *</label>
+                            <textarea id="mQuestionText" required rows="4"
+                                placeholder="Type your full question here (min 10 characters)..."
+                                style="width: 100%; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; color: var(--text); font-family: inherit; font-size: 1rem;"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="manualSaveBtn">
+                            <span class="btn-text">Save Manual Question</span>
+                            <span class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+                </div>
             </section>
 
             <!-- Generated Question Display -->
             <section class="card" id="resultSection" style="display: none;">
-                <h2>Generated Question</h2>
+                <h2>Question Summary</h2>
                 <div class="question-display">
                     <div class="question-metadata">
                         <span class="badge" id="resultBloom"></span>

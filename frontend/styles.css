@@ -397,6 +397,14 @@ nav {
     box-shadow: 0 15px 40px rgba(16, 185, 129, 0.3);
 }
 
+.stat-card.duplicate {
+    border-color: var(--danger);
+}
+
+.stat-card.duplicate:hover {
+    box-shadow: 0 15px 40px rgba(239, 68, 68, 0.3);
+}
+
 .stat-icon {
     font-size: 3rem;
 }

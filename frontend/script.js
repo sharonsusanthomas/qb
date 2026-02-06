@@ -76,12 +76,29 @@ function switchTab(mode) {
 
     // Content
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    if (mode === 'standard') {
-        document.getElementById('standardMode').classList.add('active');
-    } else {
-        document.getElementById('contextMode').classList.add('active');
-    }
+    document.getElementById(`${mode}Mode`).classList.add('active');
 }
+
+// Manual Form submission
+const manualForm = document.getElementById('manualForm');
+const manualSaveBtn = document.getElementById('manualSaveBtn');
+const manualBtnText = manualSaveBtn.querySelector('.btn-text');
+const manualLoader = manualSaveBtn.querySelector('.loader');
+
+manualForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+        subject: document.getElementById('mSubject').value,
+        topic: document.getElementById('mTopic').value,
+        bloom_level: document.getElementById('mBloomLevel').value,
+        difficulty: document.getElementById('mDifficulty').value,
+        marks: parseInt(document.getElementById('mMarks').value),
+        question_text: document.getElementById('mQuestionText').value
+    };
+
+    await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
+});
 
 // Standard Form submission
 form.addEventListener('submit', async (e) => {

@@ -22,6 +22,7 @@ class Difficulty(str, Enum):
 class QuestionStatus(str, Enum):
     DEDUPE_PENDING = "DEDUPE_PENDING"
     DEDUPE_APPROVED = "DEDUPE_APPROVED"
+    DUPLICATE_FLAGGED = "DUPLICATE_FLAGGED"
     APPROVED = "APPROVED"
 
 
@@ -43,6 +44,15 @@ class QuestionGenerateRequest(BaseModel):
                 "marks": 15
             }
         }
+
+
+class QuestionManualRequest(BaseModel):
+    subject: str = Field(..., description="Subject name")
+    topic: str = Field(..., description="Topic name")
+    bloom_level: BloomLevel = Field(..., description="Bloom's Taxonomy level")
+    difficulty: Difficulty = Field(..., description="Question difficulty")
+    marks: int = Field(..., description="Marks")
+    question_text: str = Field(..., min_length=10, description="The content of the question")
 
 
 class BatchQuestionSpec(BaseModel):
@@ -97,6 +107,17 @@ class BatchPlanResponse(BaseModel):
     questions: List[QuestionResponse]
     created_at: datetime
     
+    class Config:
+        from_attributes = True
+
+
+class DuplicateMatchResponse(BaseModel):
+    id: int
+    match_question: QuestionResponse
+    similarity_score: float
+    verdict: str
+    reason: str
+
     class Config:
         from_attributes = True
 

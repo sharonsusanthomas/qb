@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -23,6 +23,7 @@ class Difficulty(str, enum.Enum):
 class QuestionStatus(str, enum.Enum):
     DEDUPE_PENDING = "DEDUPE_PENDING"
     DEDUPE_APPROVED = "DEDUPE_APPROVED"
+    DUPLICATE_FLAGGED = "DUPLICATE_FLAGGED"
     APPROVED = "APPROVED"
 
 
@@ -39,8 +40,24 @@ class Question(Base):
     status = Column(Enum(QuestionStatus), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationship
+    # Relationships
     batch_questions = relationship("BatchQuestion", back_populates="question")
+    duplicate_results = relationship("DuplicateMatch", foreign_keys="DuplicateMatch.question_id", back_populates="question")
+
+
+class DuplicateMatch(Base):
+    __tablename__ = "duplicate_matches"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    match_question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    similarity_score = Column(Float)  # Similarity score between 0 and 1
+    verdict = Column(String(50))  # DUPLICATE, CONFLICT, UNIQUE
+    reason = Column(Text)
+    
+    # Relationships
+    question = relationship("Question", foreign_keys=[question_id], back_populates="duplicate_results")
+    match_question = relationship("Question", foreign_keys=[match_question_id])
 
 
 class BatchPlan(Base):
