@@ -10,63 +10,91 @@ const errorSection = document.getElementById('errorSection');
 const subjectSelect = document.getElementById('subject');
 const topicSelect = document.getElementById('topic');
 
+const pdfSubjectSelect = document.getElementById('pdfSubject');
+const pdfTopicSelect = document.getElementById('pdfTopic');
+
+const mSubjectSelect = document.getElementById('mSubject');
+const mTopicSelect = document.getElementById('mTopic');
+
+// Helper to fill subject selects
+function populateSubjectSelects(data) {
+    [subjectSelect, pdfSubjectSelect, mSubjectSelect].forEach(select => {
+        select.innerHTML = '<option value="">Select Subject</option>';
+        data.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.id;
+            // Store name for manual/pdf use if needed, though we usually send names
+            option.textContent = `${subject.course_code} - ${subject.subject_name}`;
+            option.dataset.subjectName = subject.subject_name;
+            select.appendChild(option);
+        });
+    });
+}
+
 // Load subjects on page load
 async function loadSubjects() {
     try {
         const response = await fetch(`${API_BASE_URL}/metadata/subjects`);
         const subjects = await response.json();
-
-        subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-        subjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.id;
-            option.textContent = `${subject.course_code} - ${subject.subject_name}`;
-            option.dataset.subjectName = subject.subject_name;
-            subjectSelect.appendChild(option);
-        });
+        populateSubjectSelects(subjects);
     } catch (error) {
         console.error('Failed to load subjects:', error);
-        subjectSelect.innerHTML = '<option value="">Failed to load subjects</option>';
+        [subjectSelect, pdfSubjectSelect, mSubjectSelect].forEach(select => {
+            select.innerHTML = '<option value="">Failed to load subjects</option>';
+        });
     }
 }
 
-// Load topics when subject is selected
-async function loadTopics(subjectId) {
-    topicSelect.disabled = true;
-    topicSelect.innerHTML = '<option value="">Loading topics...</option>';
+// Load topics helper
+async function loadTopics(subjectId, targetTopicSelect) {
+    if (!targetTopicSelect) return;
+
+    targetTopicSelect.disabled = true;
+    targetTopicSelect.innerHTML = '<option value="">Loading topics...</option>';
 
     try {
         const response = await fetch(`${API_BASE_URL}/metadata/subjects/${subjectId}/topics`);
         const topics = await response.json();
 
-        topicSelect.innerHTML = '<option value="">Select Topic</option>';
+        targetTopicSelect.innerHTML = '<option value="">Select Topic</option>';
         topics.forEach(topic => {
             const option = document.createElement('option');
             option.value = topic.id;
             option.textContent = topic.topic_name;
             option.dataset.topicName = topic.topic_name;
-            topicSelect.appendChild(option);
+            targetTopicSelect.appendChild(option);
         });
-        topicSelect.disabled = false;
+        targetTopicSelect.disabled = false;
     } catch (error) {
         console.error('Failed to load topics:', error);
-        topicSelect.innerHTML = '<option value="">Failed to load topics</option>';
+        targetTopicSelect.innerHTML = '<option value="">Failed to load topics</option>';
     }
 }
 
-// Subject change handler
-subjectSelect.addEventListener('change', (e) => {
-    const subjectId = e.target.value;
-    if (subjectId) {
-        loadTopics(subjectId);
-    } else {
-        topicSelect.disabled = true;
-        topicSelect.innerHTML = '<option value="">Select a subject first</option>';
-    }
-});
+// Attach listeners to all subject dropdowns
+function attachSubjectListeners() {
+    const pairs = [
+        { subject: subjectSelect, topic: topicSelect },
+        { subject: pdfSubjectSelect, topic: pdfTopicSelect },
+        { subject: mSubjectSelect, topic: mTopicSelect }
+    ];
+
+    pairs.forEach(pair => {
+        pair.subject.addEventListener('change', (e) => {
+            const subjectId = e.target.value;
+            if (subjectId) {
+                loadTopics(subjectId, pair.topic);
+            } else {
+                pair.topic.disabled = true;
+                pair.topic.innerHTML = '<option value="">Select a subject first</option>';
+            }
+        });
+    });
+}
 
 // Load subjects on page load
 loadSubjects();
+attachSubjectListeners();
 
 // Tab switching
 function switchTab(mode) {
@@ -79,36 +107,13 @@ function switchTab(mode) {
     document.getElementById(`${mode}Mode`).classList.add('active');
 }
 
-// Manual Form submission
-const manualForm = document.getElementById('manualForm');
-const manualSaveBtn = document.getElementById('manualSaveBtn');
-const manualBtnText = manualSaveBtn.querySelector('.btn-text');
-const manualLoader = manualSaveBtn.querySelector('.loader');
-
-manualForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = {
-        subject: document.getElementById('mSubject').value,
-        topic: document.getElementById('mTopic').value,
-        bloom_level: document.getElementById('mBloomLevel').value,
-        difficulty: document.getElementById('mDifficulty').value,
-        marks: parseInt(document.getElementById('mMarks').value),
-        question_text: document.getElementById('mQuestionText').value
-    };
-
-    await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
-});
-
 // Standard Form submission
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Get selected option elements
     const selectedSubject = subjectSelect.options[subjectSelect.selectedIndex];
     const selectedTopic = topicSelect.options[topicSelect.selectedIndex];
 
-    // Get form values
     const formData = {
         subject: selectedSubject.dataset.subjectName,
         topic: selectedTopic.dataset.topicName,
@@ -137,10 +142,14 @@ pdfForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    // Get text from selects
+    const selectedSubject = pdfSubjectSelect.options[pdfSubjectSelect.selectedIndex].dataset.subjectName;
+    const selectedTopic = pdfTopicSelect.options[pdfTopicSelect.selectedIndex].dataset.topicName;
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('subject', document.getElementById('pdfSubject').value);
-    formData.append('topic', document.getElementById('pdfTopic').value);
+    formData.append('subject', selectedSubject);
+    formData.append('topic', selectedTopic);
     formData.append('bloom_level', document.getElementById('pdfBloomLevel').value);
     formData.append('difficulty', document.getElementById('pdfDifficulty').value);
     formData.append('marks', document.getElementById('pdfMarks').value);
@@ -154,6 +163,30 @@ pdfForm.addEventListener('submit', async (e) => {
     }
 
     await handleGeneration(`${API_BASE_URL}/generate-from-notes/`, formData, pdfGenerateBtn, pdfBtnText, pdfLoader, true);
+});
+
+// Manual Form submission
+const manualForm = document.getElementById('manualForm');
+const manualSaveBtn = document.getElementById('manualSaveBtn');
+const manualBtnText = manualSaveBtn.querySelector('.btn-text');
+const manualLoader = manualSaveBtn.querySelector('.loader');
+
+manualForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const selectedSubject = mSubjectSelect.options[mSubjectSelect.selectedIndex].dataset.subjectName;
+    const selectedTopic = mTopicSelect.options[mTopicSelect.selectedIndex].dataset.topicName;
+
+    const formData = {
+        subject: selectedSubject,
+        topic: selectedTopic,
+        bloom_level: document.getElementById('mBloomLevel').value,
+        difficulty: document.getElementById('mDifficulty').value,
+        marks: parseInt(document.getElementById('mMarks').value),
+        question_text: document.getElementById('mQuestionText').value
+    };
+
+    await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
 });
 
 async function handleGeneration(url, data, btn, btnTextElem, loaderElem, isMultipart) {
