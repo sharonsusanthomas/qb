@@ -26,13 +26,42 @@ class QuestionStatus(str, Enum):
     APPROVED = "APPROVED"
 
 
+
+
 # Request Schemas
+
+class SubjectResponse(BaseModel):
+    id: int
+    course_code: str
+    subject_name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class TopicResponse(BaseModel):
+    id: int
+    topic_name: str
+    
+    class Config:
+        from_attributes = True
+
+class CourseOutcomeResponse(BaseModel):
+    id: int
+    outcome_code: str
+    description: str
+    
+    class Config:
+        from_attributes = True
+
+
 class QuestionGenerateRequest(BaseModel):
     subject: str = Field(..., min_length=1, max_length=255, description="Subject name")
     topic: str = Field(..., min_length=1, max_length=255, description="Topic name")
     bloom_level: BloomLevel = Field(..., description="Bloom's Taxonomy level (RBT1-RBT6)")
     difficulty: Difficulty = Field(..., description="Question difficulty")
     marks: int = Field(..., ge=1, le=100, description="Marks for the question")
+    course_outcome_ids: List[int] = Field(default=[], description="List of Course Outcome IDs")
     
     class Config:
         json_schema_extra = {
@@ -53,6 +82,7 @@ class QuestionManualRequest(BaseModel):
     difficulty: Difficulty = Field(..., description="Question difficulty")
     marks: int = Field(..., description="Marks")
     question_text: str = Field(..., min_length=10, description="The content of the question")
+    course_outcome_ids: List[int] = Field(default=[], description="List of Course Outcome IDs")
 
 
 class BatchQuestionSpec(BaseModel):
@@ -94,6 +124,7 @@ class QuestionResponse(BaseModel):
     question_text: str
     status: QuestionStatus
     metadata: QuestionMetadata
+    course_outcomes: List[CourseOutcomeResponse] = []  # Add COs to response
     created_at: datetime
     
     class Config:

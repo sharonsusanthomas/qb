@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP, Float
+from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP, Float, Table
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -27,6 +27,15 @@ class QuestionStatus(str, enum.Enum):
     APPROVED = "APPROVED"
 
 
+# Association table must be defined before Question
+question_course_outcomes = Table(
+    "question_course_outcomes",
+    Base.metadata,
+    Column("question_id", Integer, ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True),
+    Column("course_outcome_id", Integer, ForeignKey("course_outcomes.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Question(Base):
     __tablename__ = "questions"
     
@@ -43,6 +52,7 @@ class Question(Base):
     # Relationships
     batch_questions = relationship("BatchQuestion", back_populates="question")
     duplicate_results = relationship("DuplicateMatch", foreign_keys="DuplicateMatch.question_id", back_populates="question")
+    course_outcomes = relationship("CourseOutcome", secondary=question_course_outcomes, backref="questions")
 
 
 class DuplicateMatch(Base):

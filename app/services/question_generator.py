@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.database import Question
+from app.models.subject_topic import CourseOutcome
 from app.models.schemas import (
     QuestionGenerateRequest,
     QuestionResponse,
@@ -37,6 +38,16 @@ class QuestionGeneratorService:
             marks=request.marks
         )
         
+        # Handle Course Outcomes
+        selected_cos = []
+        if request.course_outcome_ids:
+            # Fetch COs
+            selected_cos = self.db.query(CourseOutcome).filter(CourseOutcome.id.in_(request.course_outcome_ids)).all()
+            if selected_cos:
+                # Append to prompt
+                co_text = "\n".join([f"- {co.outcome_code}: {co.description}" for co in selected_cos])
+                prompt += f"\n\nTarget Course Outcomes:\n{co_text}"
+        
         # Generate question using LLM
         question_text = llm_client.generate(prompt)
         
@@ -61,6 +72,9 @@ class QuestionGeneratorService:
             question_text=question_text
         )
         
+        if selected_cos:
+            db_question.course_outcomes = selected_cos
+        
         self.db.add(db_question)
         self.db.commit()
         self.db.refresh(db_question)
@@ -77,6 +91,7 @@ class QuestionGeneratorService:
                 difficulty=db_question.difficulty,
                 marks=db_question.marks
             ),
+            course_outcomes=db_question.course_outcomes,
             created_at=db_question.created_at
         )
 
@@ -99,6 +114,16 @@ class QuestionGeneratorService:
             marks=request.marks,
             custom_prompt=custom_prompt
         )
+        
+        # Handle Course Outcomes
+        selected_cos = []
+        if request.course_outcome_ids:
+            # Fetch COs
+            selected_cos = self.db.query(CourseOutcome).filter(CourseOutcome.id.in_(request.course_outcome_ids)).all()
+            if selected_cos:
+                # Append to prompt
+                co_text = "\n".join([f"- {co.outcome_code}: {co.description}" for co in selected_cos])
+                prompt += f"\n\nTarget Course Outcomes:\n{co_text}"
         
         # Generate question using LLM
         question_text = llm_client.generate(prompt)
@@ -126,6 +151,9 @@ class QuestionGeneratorService:
             question_text=question_text
         )
         
+        if selected_cos:
+            db_question.course_outcomes = selected_cos
+            
         self.db.add(db_question)
         self.db.commit()
         self.db.refresh(db_question)
@@ -141,6 +169,7 @@ class QuestionGeneratorService:
                 difficulty=db_question.difficulty,
                 marks=db_question.marks
             ),
+            course_outcomes=db_question.course_outcomes,
             created_at=db_question.created_at
         )
     
@@ -162,6 +191,7 @@ class QuestionGeneratorService:
                 difficulty=question.difficulty,
                 marks=question.marks
             ),
+            course_outcomes=question.course_outcomes,
             created_at=question.created_at
         )
     
@@ -196,6 +226,7 @@ class QuestionGeneratorService:
                     difficulty=q.difficulty,
                     marks=q.marks
                 ),
+                course_outcomes=q.course_outcomes,
                 created_at=q.created_at
             )
             for q in questions

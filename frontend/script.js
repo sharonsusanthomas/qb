@@ -71,12 +71,117 @@ async function loadTopics(subjectId, targetTopicSelect) {
     }
 }
 
+// Toggle custom dropdown
+function toggleDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+
+    // Close other dropdowns
+    document.querySelectorAll('.custom-dropdown').forEach(d => {
+        if (d.id !== dropdownId) d.classList.remove('open');
+    });
+
+    dropdown.classList.toggle('open');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
+    }
+});
+
+// Load Course Outcomes helper
+async function loadCourseOutcomes(subjectId, containerId, listId, dropdownId) {
+    const list = document.getElementById(listId);
+    const container = document.getElementById(containerId);
+    const dropdown = document.getElementById(dropdownId);
+
+    if (!subjectId) {
+        container.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/metadata/subjects/${subjectId}/course_outcomes`);
+        const outcomes = await response.json();
+
+        list.innerHTML = '';
+        // Reset summary
+        const header = dropdown.querySelector('.dropdown-header');
+        header.textContent = 'Select Course Outcomes...';
+
+        if (outcomes.length > 0) {
+            outcomes.forEach(co => {
+                const div = document.createElement('div');
+                div.className = 'co-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = co.id;
+                checkbox.id = `${listId}-co-${co.id}`;
+                checkbox.name = `${listId}-co`;
+                checkbox.className = 'co-checkbox';
+
+                // Update summary on change
+                checkbox.addEventListener('change', () => updateDropdownSummary(listId, dropdownId));
+
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.className = 'co-label';
+
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'co-code';
+                codeSpan.textContent = co.outcome_code;
+
+                label.appendChild(codeSpan);
+                label.appendChild(document.createTextNode(co.description));
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+
+                // Allow clicking row to toggle checkbox
+                div.addEventListener('click', (e) => {
+                    if (e.target !== checkbox && e.target.tagName !== 'LABEL') {
+                        checkbox.checked = !checkbox.checked;
+                        updateDropdownSummary(listId, dropdownId);
+                    }
+                });
+
+                list.appendChild(div);
+            });
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load COs:', error);
+        container.style.display = 'none';
+    }
+}
+
+function updateDropdownSummary(listId, dropdownId) {
+    const checkboxes = document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`);
+    const header = document.querySelector(`#${dropdownId} .dropdown-header`);
+
+    if (checkboxes.length === 0) {
+        header.textContent = 'Select Course Outcomes...';
+    } else {
+        header.textContent = `${checkboxes.length} Outcome(s) Selected`;
+    }
+}
+
+function collectSelectedCOs(listId) {
+    const checkboxes = document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`);
+    return Array.from(checkboxes).map(cb => parseInt(cb.value));
+}
+
 // Attach listeners to all subject dropdowns
 function attachSubjectListeners() {
     const pairs = [
-        { subject: subjectSelect, topic: topicSelect },
-        { subject: pdfSubjectSelect, topic: pdfTopicSelect },
-        { subject: mSubjectSelect, topic: mTopicSelect }
+        { subject: subjectSelect, topic: topicSelect, coContainer: 'coContainer', listId: 'coList', dropdownId: 'coDropdown' },
+        { subject: pdfSubjectSelect, topic: pdfTopicSelect, coContainer: 'pdfCoContainer', listId: 'pdfCoList', dropdownId: 'pdfCoDropdown' },
+        { subject: mSubjectSelect, topic: mTopicSelect, coContainer: 'mCoContainer', listId: 'mCoList', dropdownId: 'mCoDropdown' }
     ];
 
     pairs.forEach(pair => {
@@ -84,9 +189,11 @@ function attachSubjectListeners() {
             const subjectId = e.target.value;
             if (subjectId) {
                 loadTopics(subjectId, pair.topic);
+                loadCourseOutcomes(subjectId, pair.coContainer, pair.listId, pair.dropdownId);
             } else {
                 pair.topic.disabled = true;
                 pair.topic.innerHTML = '<option value="">Select a subject first</option>';
+                document.getElementById(pair.coContainer).style.display = 'none';
             }
         });
     });
@@ -119,7 +226,8 @@ form.addEventListener('submit', async (e) => {
         topic: selectedTopic.dataset.topicName,
         bloom_level: document.getElementById('bloomLevel').value,
         difficulty: document.getElementById('difficulty').value,
-        marks: parseInt(document.getElementById('marks').value)
+        marks: parseInt(document.getElementById('marks').value),
+        course_outcome_ids: collectSelectedCOs('coList')
     };
 
     await handleGeneration(`${API_BASE_URL}/questions/generate`, formData, generateBtn, btnText, loader, false);
@@ -154,6 +262,9 @@ pdfForm.addEventListener('submit', async (e) => {
     formData.append('difficulty', document.getElementById('pdfDifficulty').value);
     formData.append('marks', document.getElementById('pdfMarks').value);
 
+    const selectedCOs = collectSelectedCOs('pdfCoList');
+    selectedCOs.forEach(id => formData.append('course_outcome_ids', id));
+
     // Add custom prompt if exists
     const customPrompt = document.getElementById('customPrompt').value;
     if (customPrompt) {
@@ -183,9 +294,11 @@ manualForm.addEventListener('submit', async (e) => {
         bloom_level: document.getElementById('mBloomLevel').value,
         difficulty: document.getElementById('mDifficulty').value,
         marks: parseInt(document.getElementById('mMarks').value),
+        difficulty: document.getElementById('mDifficulty').value,
+        marks: parseInt(document.getElementById('mMarks').value),
+        course_outcome_ids: collectSelectedCOs('mCoList'),
         question_text: document.getElementById('mQuestionText').value
     };
-
     await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
 });
 
@@ -242,6 +355,20 @@ function displayQuestion(data) {
     document.getElementById('resultSubject').textContent = data.metadata.subject;
     document.getElementById('resultTopic').textContent = data.metadata.topic;
     document.getElementById('resultId').textContent = data.id;
+
+    // Display Course Outcomes if present
+    const coDisplay = document.getElementById('resultCos');
+    if (data.course_outcomes && data.course_outcomes.length > 0) {
+        if (coDisplay) {
+            const coText = data.course_outcomes.map(co => co.outcome_code).join(', ');
+            coDisplay.textContent = coText;
+            document.getElementById('resultCoContainer').style.display = 'block';
+        }
+    } else {
+        if (coDisplay) {
+            document.getElementById('resultCoContainer').style.display = 'none';
+        }
+    }
 
     // Scroll to result
     resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

@@ -5,10 +5,12 @@ from app.models.schemas import (
     QuestionGenerateRequest,
     QuestionManualRequest,
     QuestionResponse,
-    QuestionListResponse
+    QuestionListResponse,
+    CourseOutcomeResponse
 )
 from app.services.question_generator import QuestionGeneratorService
 from app.models.database import Question, QuestionStatus # Add Question and Status to use manually
+from app.models.subject_topic import CourseOutcome
 
 router = APIRouter(prefix="/api/v1/questions", tags=["Questions"])
 
@@ -29,6 +31,13 @@ def add_manual_question(
         status=QuestionStatus.DEDUPE_PENDING
     )
     db.add(new_question)
+    
+    # Link Course Outcomes for manual question
+    if request.course_outcome_ids:
+        selected_cos = db.query(CourseOutcome).filter(CourseOutcome.id.in_(request.course_outcome_ids)).all()
+        if selected_cos:
+            new_question.course_outcomes = selected_cos
+            
     db.commit()
     db.refresh(new_question)
     
@@ -45,6 +54,7 @@ def add_manual_question(
             difficulty=new_question.difficulty,
             marks=new_question.marks
         ),
+        course_outcomes=new_question.course_outcomes,
         created_at=new_question.created_at
     )
 

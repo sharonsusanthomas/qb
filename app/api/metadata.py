@@ -1,28 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.subject_topic import Subject, Topic
-from pydantic import BaseModel
+from app.models.subject_topic import Subject, Topic, CourseOutcome
+from app.models.schemas import SubjectResponse, TopicResponse, CourseOutcomeResponse
 from typing import List
 
 router = APIRouter(prefix="/api/v1/metadata", tags=["Metadata"])
 
 
-class SubjectResponse(BaseModel):
-    id: int
-    course_code: str
-    subject_name: str
-    
-    class Config:
-        from_attributes = True
-
-
-class TopicResponse(BaseModel):
-    id: int
-    topic_name: str
-    
-    class Config:
-        from_attributes = True
+# Removed duplicate models as they are now in schemas.py
 
 
 @router.get("/subjects", response_model=List[SubjectResponse])
@@ -37,3 +23,10 @@ def get_topics_by_subject(subject_id: int, db: Session = Depends(get_db)):
     """Get all topics for a specific subject"""
     topics = db.query(Topic).filter(Topic.subject_id == subject_id).order_by(Topic.topic_name).all()
     return topics
+
+
+@router.get("/subjects/{subject_id}/course_outcomes", response_model=List[CourseOutcomeResponse])
+def get_course_outcomes_by_subject(subject_id: int, db: Session = Depends(get_db)):
+    """Get all course outcomes for a specific subject"""
+    outcomes = db.query(CourseOutcome).filter(CourseOutcome.subject_id == subject_id).all()
+    return outcomes

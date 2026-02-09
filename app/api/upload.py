@@ -22,6 +22,7 @@ async def generate_from_notes(
     bloom_level: str = Form(...),
     difficulty: str = Form(...),
     marks: int = Form(...),
+    course_outcome_ids: list[int] = Form(default=[]),
     custom_prompt: str = Form(default=""),
     db: Session = Depends(get_db)
 ):
@@ -50,7 +51,8 @@ async def generate_from_notes(
             topic=topic,
             bloom_level=BloomLevel(bloom_level),
             difficulty=Difficulty(difficulty),
-            marks=marks
+            marks=marks,
+            course_outcome_ids=course_outcome_ids
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid parameters: {str(e)}")

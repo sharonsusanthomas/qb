@@ -94,6 +94,10 @@ async function openModal(status) {
                         ${status === 'DUPLICATE_FLAGGED' ? '<span class="badge" style="background:var(--danger)">FLAGGED</span>' : ''}
                     </div>
                     <p class="question-text">${q.question_text}</p>
+                    ${q.course_outcomes && q.course_outcomes.length > 0 ? `
+                    <div class="question-cos" style="margin-bottom: 0.75rem;">
+                        <strong>COs:</strong> ${q.course_outcomes.map(co => `<span class="co-badge" title="${co.description}">${co.outcome_code}</span>`).join(' ')}
+                    </div>` : ''}
                     ${status === 'DUPLICATE_FLAGGED' ? `<button class="btn-secondary" onclick="showDuplicateDetails(${q.id})">🔍 View Similarity Report</button>` : ''}
                     <small class="question-id">ID: ${q.id} | Created: ${new Date(q.created_at).toLocaleString()}</small>
                 </div>
@@ -175,7 +179,9 @@ async function showDuplicateDetails(id) {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
                     <div style="color: var(--text-muted)">
                         <strong>Subject:</strong> ${m.match_question.metadata.subject}<br>
-                        <strong>Topic:</strong> ${m.match_question.metadata.topic}
+                        <strong>Topic:</strong> ${m.match_question.metadata.topic}<br>
+                        ${m.match_question.course_outcomes && m.match_question.course_outcomes.length > 0 ?
+                `<strong>COs:</strong> ${m.match_question.course_outcomes.map(co => co.outcome_code).join(', ')}` : ''}
                     </div>
                     <div style="color: var(--text-muted)">
                         <strong>Marks:</strong> ${m.match_question.metadata.marks}<br>

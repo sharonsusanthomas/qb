@@ -47,6 +47,18 @@
                             </select>
                         </div>
 
+                        <!-- Course Outcomes -->
+                        <div class="co-container" id="coContainer">
+                            <label>Course Outcomes</label>
+                            <div class="custom-dropdown" id="coDropdown">
+                                <div class="dropdown-header" onclick="toggleDropdown('coDropdown')">Select Course
+                                    Outcomes...</div>
+                                <div id="coList" class="dropdown-list">
+                                    <!-- Checkboxes -->
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="bloomLevel">Bloom's Level *</label>
@@ -106,6 +118,18 @@
                                 <select id="pdfTopic" required disabled>
                                     <option value="">Select a subject first</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Course Outcomes -->
+                        <div class="co-container" id="pdfCoContainer">
+                            <label>Course Outcomes</label>
+                            <div class="custom-dropdown" id="pdfCoDropdown">
+                                <div class="dropdown-header" onclick="toggleDropdown('pdfCoDropdown')">Select Course
+                                    Outcomes...</div>
+                                <div id="pdfCoList" class="dropdown-list">
+                                    <!-- Checkboxes -->
+                                </div>
                             </div>
                         </div>
 
@@ -170,6 +194,18 @@
                             </div>
                         </div>
 
+                        <!-- Course Outcomes -->
+                        <div class="co-container" id="mCoContainer">
+                            <label>Course Outcomes</label>
+                            <div class="custom-dropdown" id="mCoDropdown">
+                                <div class="dropdown-header" onclick="toggleDropdown('mCoDropdown')">Select Course
+                                    Outcomes...</div>
+                                <div id="mCoList" class="dropdown-list">
+                                    <!-- Checkboxes -->
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="mBloomLevel">Bloom's Level *</label>
@@ -229,6 +265,9 @@
                         <p><strong>Subject:</strong> <span id="resultSubject"></span></p>
                         <p><strong>Topic:</strong> <span id="resultTopic"></span></p>
                         <p><strong>Question ID:</strong> <span id="resultId"></span></p>
+                        <p id="resultCoContainer" style="display: none;">
+                            <strong>Course Outcomes:</strong> <span id="resultCos" class="co-code"></span>
+                        </p>
                     </div>
                     <button class="btn-secondary" onclick="copyQuestion()">📋 Copy Question</button>
                 </div>

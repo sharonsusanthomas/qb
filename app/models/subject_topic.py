@@ -14,6 +14,7 @@ class Subject(Base):
     
     # Relationship
     topics = relationship("Topic", back_populates="subject")
+    course_outcomes = relationship("CourseOutcome", back_populates="subject")
 
 
 class Topic(Base):
@@ -26,3 +27,16 @@ class Topic(Base):
     
     # Relationship
     subject = relationship("Subject", back_populates="topics")
+
+
+class CourseOutcome(Base):
+    __tablename__ = "course_outcomes"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False, index=True)
+    outcome_code = Column(String(50), nullable=False)  # e.g., CO1, CO2
+    description = Column(String(500), nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relationship
+    subject = relationship("Subject", back_populates="course_outcomes")
