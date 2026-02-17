@@ -42,8 +42,7 @@ CREATE TABLE IF NOT EXISTS questions (
 
     INDEX idx_subject (subject),
     INDEX idx_topic (topic),
-    INDEX idx_bloom_difficulty (bloom_level, difficulty),
-    FULLTEXT INDEX ft_question_text (question_text)
+    INDEX idx_bloom_difficulty (bloom_level, difficulty)
 ) ENGINE=InnoDB;
 
 -- ---------------- DUPLICATE MATCHES ----------------

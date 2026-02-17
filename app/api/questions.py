@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.schemas import (
     QuestionGenerateRequest,
     QuestionManualRequest,
@@ -59,22 +60,25 @@ def add_manual_question(
     )
 
 
-@router.post("/generate", response_model=QuestionResponse, status_code=201)
+@router.post("/generate", response_model=list[QuestionResponse], status_code=201)
+@limiter.limit("5/minute")
 def generate_question(
-    request: QuestionGenerateRequest,
+    request: Request,
+    generate_request: QuestionGenerateRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Generate a single academic question based on provided metadata
+    Generate one or more academic questions based on provided metadata
     
     - **subject**: Subject name (e.g., "Data Structures")
     - **topic**: Topic name (e.g., "Arrays")
     - **bloom_level**: Bloom's Taxonomy level (RBT1-RBT6)
     - **difficulty**: Question difficulty (Easy, Medium, Hard)
     - **marks**: Marks for the question (1-100)
+    - **count**: Number of questions to generate (1-10)
     """
     service = QuestionGeneratorService(db)
-    return service.generate_question(request)
+    return service.generate_questions(generate_request)
 
 
 @router.get("/{question_id}", response_model=QuestionResponse)

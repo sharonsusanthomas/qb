@@ -42,11 +42,11 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     subject = Column(String(255), nullable=False, index=True)
     topic = Column(String(255), nullable=False, index=True)
-    bloom_level = Column(Enum(BloomLevel), nullable=False, index=True)
-    difficulty = Column(Enum(Difficulty), nullable=False, index=True)
+    bloom_level = Column(Enum(BloomLevel, native_enum=False), nullable=False, index=True)
+    difficulty = Column(Enum(Difficulty, native_enum=False), nullable=False, index=True)
     marks = Column(Integer, nullable=False)
     question_text = Column(Text, nullable=False)
-    status = Column(Enum(QuestionStatus), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
+    status = Column(Enum(QuestionStatus, native_enum=False), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     # Relationships

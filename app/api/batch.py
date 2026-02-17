@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.schemas import BatchPlanRequest, BatchPlanResponse
 from app.services.batch_service import BatchService
 
@@ -8,8 +9,10 @@ router = APIRouter(prefix="/api/v1/batch", tags=["Batch"])
 
 
 @router.post("/plan", response_model=BatchPlanResponse, status_code=201)
+@limiter.limit("1/minute")
 def create_batch_plan(
-    request: BatchPlanRequest,
+    request: Request,
+    batch_request: BatchPlanRequest,
     db: Session = Depends(get_db)
 ):
     """
@@ -22,7 +25,7 @@ def create_batch_plan(
     - **questions**: List of question specifications (topic, bloom_level, difficulty, marks)
     """
     service = BatchService(db)
-    return service.create_batch_plan(request)
+    return service.create_batch_plan(batch_request)
 
 
 @router.get("/plan/{batch_id}", response_model=BatchPlanResponse)

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.schemas import (
     QuestionResponse, 
     QuestionGenerateRequest,
@@ -14,20 +15,23 @@ import json
 router = APIRouter(prefix="/api/v1/generate-from-notes", tags=["Context Generation"])
 
 
-@router.post("/", response_model=QuestionResponse)
+@router.post("/", response_model=list[QuestionResponse])
+@limiter.limit("3/minute")
 async def generate_from_notes(
+    request: Request,
     file: UploadFile = File(...),
     subject: str = Form(...),
     topic: str = Form(...),
     bloom_level: str = Form(...),
     difficulty: str = Form(...),
     marks: int = Form(...),
+    count: int = Form(default=1),
     course_outcome_ids: list[int] = Form(default=[]),
     custom_prompt: str = Form(default=""),
     db: Session = Depends(get_db)
 ):
     """
-    Generate a question from an uploaded PDF file
+    Generate one or more questions from an uploaded PDF file
     """
     # Validate file type
     if not file.filename.endswith('.pdf'):
@@ -46,12 +50,13 @@ async def generate_from_notes(
     
     # Create request object
     try:
-        request = QuestionGenerateRequest(
+        request_data = QuestionGenerateRequest(
             subject=subject,
             topic=topic,
             bloom_level=BloomLevel(bloom_level),
             difficulty=Difficulty(difficulty),
             marks=marks,
+            count=count,
             course_outcome_ids=course_outcome_ids
         )
     except ValueError as e:
@@ -59,8 +64,8 @@ async def generate_from_notes(
     
     # Generate question
     service = QuestionGeneratorService(db)
-    return service.generate_question_from_context(
+    return service.generate_questions_from_context(
         context=extracted_text,
-        request=request,
+        request=request_data,
         custom_prompt=custom_prompt
     )

@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic Question Generator</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Content Rendering Libraries -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -87,6 +93,11 @@
                                 <label for="marks">Marks *</label>
                                 <input type="number" id="marks" required min="1" max="100" placeholder="15">
                             </div>
+
+                            <div class="form-group">
+                                <label for="questionCount">Count *</label>
+                                <input type="number" id="questionCount" required min="1" max="10" value="1">
+                            </div>
                         </div>
 
                         <button type="submit" class="btn-primary" id="generateBtn">
@@ -160,6 +171,11 @@
                             <div class="form-group">
                                 <label for="pdfMarks">Marks *</label>
                                 <input type="number" id="pdfMarks" required min="1" max="100" placeholder="15">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pdfQuestionCount">Count *</label>
+                                <input type="number" id="pdfQuestionCount" required min="1" max="10" value="1">
                             </div>
                         </div>
 
@@ -252,26 +268,22 @@
             </section>
 
             <!-- Generated Question Display -->
-            <section class="card" id="resultSection" style="display: none;">
-                <h2>Question Summary</h2>
-                <div class="question-display">
-                    <div class="question-metadata">
-                        <span class="badge" id="resultBloom"></span>
-                        <span class="badge" id="resultDifficulty"></span>
-                        <span class="badge" id="resultMarks"></span>
-                    </div>
-                    <div class="question-text" id="questionText"></div>
-                    <div class="question-meta-info">
-                        <p><strong>Subject:</strong> <span id="resultSubject"></span></p>
-                        <p><strong>Topic:</strong> <span id="resultTopic"></span></p>
-                        <p><strong>Question ID:</strong> <span id="resultId"></span></p>
-                        <p id="resultCoContainer" style="display: none;">
-                            <strong>Course Outcomes:</strong> <span id="resultCos" class="co-code"></span>
-                        </p>
-                    </div>
-                    <button class="btn-secondary" onclick="copyQuestion()">📋 Copy Question</button>
+            <!-- Generated Questions Display -->
+            <section id="resultSection" style="display: none;">
+                <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                    Generated Results
+                    <span id="resultBatchCount" class="badge"
+                        style="background: var(--primary); font-size: 0.8rem;"></span>
+                    <button class="btn-secondary" id="exportBtn"
+                        style="margin-left: auto; width: auto; padding: 0.5rem 1rem;" onclick="exportResults()">
+                        🖨️ Export as PDF
+                    </button>
+                </h2>
+                <div id="resultsList" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Question Cards will be injected here -->
                 </div>
             </section>
+
 
             <!-- Error Display -->
             <section class="card error-card" id="errorSection" style="display: none;">
@@ -281,11 +293,12 @@
         </main>
 
         <footer>
-            <p>Powered by Groq LLM • <a href="http://localhost:8000/docs" target="_blank">API Docs</a></p>
+            <p>Powered by Groq LLM • <a href="http://127.0.0.1:8000/docs" target="_blank">API Docs</a></p>
         </footer>
+        <div id="toastContainer"></div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 
 </html>

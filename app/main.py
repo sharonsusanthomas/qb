@@ -1,7 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.core.database import engine, Base
+from fastapi.staticfiles import StaticFiles
 from app.api import questions, batch, metadata, dashboard, upload
+
+from app.core.limiter import limiter
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -12,6 +17,8 @@ app = FastAPI(
     description="Generate Bloom's Taxonomy-compliant examination questions",
     version="1.0.0"
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware
 app.add_middleware(
@@ -29,15 +36,14 @@ app.include_router(metadata.router)
 app.include_router(dashboard.router)
 app.include_router(upload.router)
 
+# Mount frontend
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
 
-@app.get("/")
-def root():
-    """Root endpoint"""
-    return {
-        "message": "Academic Question Generator API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+
+
+# Routes are handled by static mount or specific routers
+
 
 
 @app.get("/health")

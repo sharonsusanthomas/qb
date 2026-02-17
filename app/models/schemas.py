@@ -61,6 +61,7 @@ class QuestionGenerateRequest(BaseModel):
     bloom_level: BloomLevel = Field(..., description="Bloom's Taxonomy level (RBT1-RBT6)")
     difficulty: Difficulty = Field(..., description="Question difficulty")
     marks: int = Field(..., ge=1, le=100, description="Marks for the question")
+    count: int = Field(default=1, ge=1, le=10, description="Number of questions to generate")
     course_outcome_ids: List[int] = Field(default=[], description="List of Course Outcome IDs")
     
     class Config:

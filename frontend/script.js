@@ -1,11 +1,42 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from './modules/config.js';
+import * as ui from './modules/ui.js';
+import * as api from './modules/api.js';
+
+console.log('Script module initialized. API Base:', API_BASE_URL);
+
+// Initialize Markdown Renderer
+const md = window.markdownit({
+    html: true,
+    linkify: true,
+    typographer: true
+});
+
+// Simple KaTeX integration for Markdown
+const originalRender = md.render.bind(md);
+md.render = (text) => {
+    // Replace $$...$$ and $...$ with KaTeX rendered HTML before/after MD rendering
+    // This is a simple implementation; a full plugin would be better but this works for CDN
+    let rendered = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+        try { return `<div class="katex-display">${katex.renderToString(formula, { displayMode: true })}</div>`; }
+        catch (e) { return match; }
+    });
+    rendered = rendered.replace(/\$([^\$]+?)\$/g, (match, formula) => {
+        try { return katex.renderToString(formula, { displayMode: false }); }
+        catch (e) { return match; }
+    });
+    return originalRender(rendered);
+};
+
 
 const form = document.getElementById('questionForm');
 const generateBtn = document.getElementById('generateBtn');
 const btnText = document.querySelector('.btn-text');
 const loader = document.querySelector('.loader');
 const resultSection = document.getElementById('resultSection');
+const resultsList = document.getElementById('resultsList');
+const resultBatchCount = document.getElementById('resultBatchCount');
 const errorSection = document.getElementById('errorSection');
+const errorMessage = document.getElementById('errorMessage');
 
 const subjectSelect = document.getElementById('subject');
 const topicSelect = document.getElementById('topic');
@@ -33,15 +64,17 @@ function populateSubjectSelects(data) {
 
 // Load subjects on page load
 async function loadSubjects() {
+    console.log('Attempting to load subjects...');
     try {
-        const response = await fetch(`${API_BASE_URL}/metadata/subjects`);
-        const subjects = await response.json();
+        const subjects = await api.getSubjects();
+        console.log('Subjects loaded successfully:', subjects.length);
         populateSubjectSelects(subjects);
     } catch (error) {
         console.error('Failed to load subjects:', error);
         [subjectSelect, pdfSubjectSelect, mSubjectSelect].forEach(select => {
-            select.innerHTML = '<option value="">Failed to load subjects</option>';
+            select.innerHTML = '<option value="">Error loading subjects</option>';
         });
+        ui.showToast('Failed to load subjects. Please refresh.', 'error');
     }
 }
 
@@ -53,8 +86,7 @@ async function loadTopics(subjectId, targetTopicSelect) {
     targetTopicSelect.innerHTML = '<option value="">Loading topics...</option>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/metadata/subjects/${subjectId}/topics`);
-        const topics = await response.json();
+        const topics = await api.getTopics(subjectId);
 
         targetTopicSelect.innerHTML = '<option value="">Select Topic</option>';
         topics.forEach(topic => {
@@ -68,6 +100,7 @@ async function loadTopics(subjectId, targetTopicSelect) {
     } catch (error) {
         console.error('Failed to load topics:', error);
         targetTopicSelect.innerHTML = '<option value="">Failed to load topics</option>';
+        ui.showToast('Failed to load topics for selected subject', 'error');
     }
 }
 
@@ -103,8 +136,7 @@ async function loadCourseOutcomes(subjectId, containerId, listId, dropdownId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/metadata/subjects/${subjectId}/course_outcomes`);
-        const outcomes = await response.json();
+        const outcomes = await api.getCourseOutcomes(subjectId);
 
         list.innerHTML = '';
         // Reset summary
@@ -155,10 +187,12 @@ async function loadCourseOutcomes(subjectId, containerId, listId, dropdownId) {
             container.style.display = 'none';
         }
     } catch (error) {
-        console.error('Failed to load COs:', error);
+        console.error('Failed to load course outcomes:', error);
+        ui.showToast('Failed to load course outcomes', 'warning');
         container.style.display = 'none';
     }
 }
+
 
 function updateDropdownSummary(listId, dropdownId) {
     const checkboxes = document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`);
@@ -227,9 +261,11 @@ form.addEventListener('submit', async (e) => {
         bloom_level: document.getElementById('bloomLevel').value,
         difficulty: document.getElementById('difficulty').value,
         marks: parseInt(document.getElementById('marks').value),
+        count: parseInt(document.getElementById('questionCount').value || 1),
         course_outcome_ids: collectSelectedCOs('coList')
     };
 
+    console.log('Generating questions with data:', formData);
     await handleGeneration(`${API_BASE_URL}/questions/generate`, formData, generateBtn, btnText, loader, false);
 });
 
@@ -261,18 +297,16 @@ pdfForm.addEventListener('submit', async (e) => {
     formData.append('bloom_level', document.getElementById('pdfBloomLevel').value);
     formData.append('difficulty', document.getElementById('pdfDifficulty').value);
     formData.append('marks', document.getElementById('pdfMarks').value);
+    formData.append('count', document.getElementById('pdfQuestionCount').value);
 
     const selectedCOs = collectSelectedCOs('pdfCoList');
     selectedCOs.forEach(id => formData.append('course_outcome_ids', id));
 
     // Add custom prompt if exists
     const customPrompt = document.getElementById('customPrompt').value;
-    if (customPrompt) {
-        formData.append('custom_prompt', customPrompt);
-    } else {
-        formData.append('custom_prompt', '');
-    }
+    formData.append('custom_prompt', customPrompt || '');
 
+    console.log('Generating context-based questions...');
     await handleGeneration(`${API_BASE_URL}/generate-from-notes/`, formData, pdfGenerateBtn, pdfBtnText, pdfLoader, true);
 });
 
@@ -293,20 +327,39 @@ manualForm.addEventListener('submit', async (e) => {
         topic: selectedTopic,
         bloom_level: document.getElementById('mBloomLevel').value,
         difficulty: document.getElementById('mDifficulty').value,
-        marks: parseInt(document.getElementById('mMarks').value),
-        difficulty: document.getElementById('mDifficulty').value,
-        marks: parseInt(document.getElementById('mMarks').value),
+        marks: parseInt(document.getElementById('mMarks').value || 15),
         course_outcome_ids: collectSelectedCOs('mCoList'),
         question_text: document.getElementById('mQuestionText').value
     };
     await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
 });
 
+const generationStatuses = [
+    "Analyzing curriculum standards...",
+    "Consulting AI Brain...",
+    "Applying Bloom's Taxonomy...",
+    "Validating difficulty constraints...",
+    "Checking for duplicates...",
+    "Ensuring RBT compliance...",
+    "Polishing question phrasing...",
+    "Finalizing metadata..."
+];
+
+const pdfStatuses = [
+    "Reading uploaded PDF content...",
+    "Extracting relevant context...",
+    "Identifying key concepts...",
+    "Consulting AI Brain...",
+    "Generating context-aware question...",
+    "Validating against notes...",
+    "Double-checking marks allocation..."
+];
+
 async function handleGeneration(url, data, btn, btnTextElem, loaderElem, isMultipart) {
+    const statuses = isMultipart ? pdfStatuses : generationStatuses;
+
     // Show loading state
-    btn.disabled = true;
-    btnTextElem.style.display = 'none';
-    loaderElem.style.display = 'block';
+    ui.toggleLoader(btn, btnTextElem, loaderElem, true, statuses);
     resultSection.style.display = 'none';
     errorSection.style.display = 'none';
 
@@ -316,62 +369,114 @@ async function handleGeneration(url, data, btn, btnTextElem, loaderElem, isMulti
             body: isMultipart ? data : JSON.stringify(data)
         };
 
-        // Only add Content-Type for JSON, fetch adds multipart headers automatically
         if (!isMultipart) {
-            options.headers = {
-                'Content-Type': 'application/json'
-            };
+            options.headers = { 'Content-Type': 'application/json' };
         }
 
+        console.log(`Sending request to ${url}...`);
         const response = await fetch(url, options);
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ detail: 'Failed to generate question' }));
+            console.error('API Error Response:', error);
             throw new Error(error.detail || 'Failed to generate question');
         }
 
         const result = await response.json();
-        displayQuestion(result);
+        console.log('API Result received:', result);
+
+        displayResults(Array.isArray(result) ? result : [result]);
+        ui.showToast('Generation successful!', 'success');
 
     } catch (error) {
-        displayError(error.message);
+        console.error('Generation Error:', error);
+        ui.displayError(error.message, errorSection, errorMessage);
+        ui.showToast(error.message, 'error');
     } finally {
-        // Reset button state
-        btn.disabled = false;
-        btnTextElem.style.display = 'inline';
-        loaderElem.style.display = 'none';
+        ui.toggleLoader(btn, btnTextElem, loaderElem, false);
     }
 }
 
-function displayQuestion(data) {
-    // Show result section
+function displayResults(results) {
+    console.log(`Displaying ${results.length} results`);
+    resultsList.innerHTML = '';
+    resultBatchCount.textContent = `${results.length} Item(s)`;
     resultSection.style.display = 'block';
 
-    // Populate data
-    document.getElementById('questionText').textContent = data.question_text;
-    document.getElementById('resultBloom').textContent = data.metadata.bloom_level;
-    document.getElementById('resultDifficulty').textContent = data.metadata.difficulty;
-    document.getElementById('resultMarks').textContent = `${data.metadata.marks} marks`;
-    document.getElementById('resultSubject').textContent = data.metadata.subject;
-    document.getElementById('resultTopic').textContent = data.metadata.topic;
-    document.getElementById('resultId').textContent = data.id;
+    results.forEach((data, index) => {
+        const card = document.createElement('div');
+        card.className = 'card question-display';
+        card.style.marginTop = index === 0 ? '0' : '1.5rem';
 
-    // Display Course Outcomes if present
-    const coDisplay = document.getElementById('resultCos');
-    if (data.course_outcomes && data.course_outcomes.length > 0) {
-        if (coDisplay) {
-            const coText = data.course_outcomes.map(co => co.outcome_code).join(', ');
-            coDisplay.textContent = coText;
-            document.getElementById('resultCoContainer').style.display = 'block';
-        }
-    } else {
-        if (coDisplay) {
-            document.getElementById('resultCoContainer').style.display = 'none';
-        }
-    }
+        const coHtml = (data.course_outcomes && data.course_outcomes.length > 0)
+            ? `<p><strong>Course Outcomes:</strong> <span class="co-code">${data.course_outcomes.map(co => co.outcome_code).join(', ')}</span></p>`
+            : '';
 
-    // Scroll to result
+        // Render Markdown content
+        const renderedText = md.render(data.question_text);
+
+        card.innerHTML = `
+            <div class="question-metadata no-print">
+                <span class="badge">${data.metadata.bloom_level}</span>
+                <span class="badge">${data.metadata.difficulty}</span>
+                <span class="badge">${data.metadata.marks} marks</span>
+            </div>
+            <div class="question-text printable-content" id="q-text-${data.id}">${renderedText}</div>
+            <div class="question-meta-info">
+                <p><strong>Subject:</strong> ${data.metadata.subject}</p>
+                <p><strong>Topic:</strong> ${data.metadata.topic}</p>
+                ${coHtml}
+                <p class="no-print"><strong>Question ID:</strong> ${data.id}</p>
+            </div>
+            <div class="no-print" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn-secondary" onclick="copyQuestion(${data.id})">📋 Copy Raw</button>
+                <button class="btn-secondary" style="background: transparent; border: 1px solid var(--border);" onclick="window.open('/api/v1/questions/${data.id}', '_blank')">🔗 View JSON</button>
+            </div>
+        `;
+        resultsList.appendChild(card);
+    });
+
     resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function copyQuestion(id) {
+    // For copying, we might want the original raw text if it's markdown
+    // Let's rely on the original data or just grab it from a hypothetical data store
+    // For now, we'll just grab the textContent which is the rendered text minus tags
+    const textElem = document.getElementById(`q-text-${id}`);
+    if (!textElem) return;
+
+    try {
+        await navigator.clipboard.writeText(textElem.innerText);
+        ui.showToast('Question text copied!', 'success');
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        ui.showToast('Failed to copy text', 'error');
+    }
+}
+
+function exportResults() {
+    const element = document.getElementById('resultsList');
+    const opt = {
+        margin: [15, 15],
+        filename: 'Generated_Questions.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: 'avoid-all', before: '.question-display' }
+    };
+
+    // Temporarily add a header for the PDF
+    const header = document.createElement('div');
+    header.innerHTML = `
+        <h1 style="color: #2563eb; margin-bottom: 20px;">Academic Question Bank</h1>
+        <p style="margin-bottom: 30px; color: #64748b;">Generated on: ${new Date().toLocaleString()}</p>
+    `;
+    element.prepend(header);
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        header.remove(); // Clean up after saving
+    });
 }
 
 function displayError(message) {
@@ -380,25 +485,8 @@ function displayError(message) {
     errorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function copyQuestion() {
-    const questionText = document.getElementById('questionText').textContent;
-    const metadata = `Subject: ${document.getElementById('resultSubject').textContent}\n` +
-        `Topic: ${document.getElementById('resultTopic').textContent}\n` +
-        `Bloom's Level: ${document.getElementById('resultBloom').textContent}\n` +
-        `Difficulty: ${document.getElementById('resultDifficulty').textContent}\n` +
-        `Marks: ${document.getElementById('resultMarks').textContent}\n\n` +
-        `Question:\n${questionText}`;
-
-    navigator.clipboard.writeText(metadata).then(() => {
-        // Show feedback
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = '✓ Copied!';
-        btn.style.background = 'var(--success)';
-
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '';
-        }, 2000);
-    });
-}
+// Export functions to window for HTML accessibility
+window.switchTab = switchTab;
+window.toggleDropdown = toggleDropdown;
+window.copyQuestion = copyQuestion;
+window.exportResults = exportResults;
