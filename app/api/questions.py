@@ -124,3 +124,17 @@ def list_questions(
         questions=questions,
         total=len(questions)
     )
+
+@router.delete("/{question_id}", status_code=204)
+def delete_question(
+    question_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a question by ID"""
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    db.delete(question)
+    db.commit()
+    return None

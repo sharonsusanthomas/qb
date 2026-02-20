@@ -169,7 +169,7 @@ async function showDuplicateDetails(id) {
                         <span class="badge" style="background: var(--danger)">MATCH FOUND: ID #${m.match_question.id}</span>
                         <span class="badge" style="background: var(--primary)">${(m.similarity_score * 100).toFixed(0)}% Semantic Match</span>
                     </div>
-                    <span class="badge" style="background: var(--text-muted)">Verdict: ${m.verdict}</span>
+                    <span class="badge" style="background: ${getVerdictColor(m.verdict)}">Verdict: ${m.verdict}</span>
                 </div>
                 
                 <div class="question-text" style="background: rgba(239, 68, 68, 0.05); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid var(--danger);">
@@ -192,6 +192,14 @@ async function showDuplicateDetails(id) {
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--danger); font-weight: 500;">
                     🤖 AI Reasoning: <span style="font-weight: 400; color: var(--text);">${m.reason}</span>
                 </div>
+
+                <div style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--primary)" onclick="linkQuestion(${id}, ${m.match_question.id}, 'CHILD')">🔗 Link as Child</button>
+                    <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--primary)" onclick="linkQuestion(${id}, ${m.match_question.id}, 'PARENT')">🔗 Link as Parent</button>
+                    <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--secondary)" onclick="linkQuestion(${id}, ${m.match_question.id}, 'PARALLEL')">⚖️ Link as Parallel</button>
+                    <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--success)" onclick="linkQuestion(${id}, null, 'IGNORE')">✅ Mark as Unique (Ignore)</button>
+                    <button class="btn-action" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--danger)" onclick="deleteQuestion(${id})">🗑️ Delete Duplicate</button>
+                </div>
             </div>
         `).join('');
 
@@ -205,6 +213,68 @@ async function showDuplicateDetails(id) {
 function closeReportModal() {
     document.getElementById('reportModal').style.display = 'none';
 }
+
+function getVerdictColor(verdict) {
+    if (verdict === 'DUPLICATE') return 'var(--danger)';
+    if (verdict === 'PARENT_OF' || verdict === 'CHILD_OF') return 'var(--primary)';
+    if (verdict === 'PARALLEL_TO') return 'var(--secondary)';
+    return 'var(--text-muted)';
+}
+
+async function linkQuestion(id, targetId, relationType) {
+    addLog(`Linking Question #${id} as ${relationType}...`, 'process');
+    try {
+        const response = await fetch(`${API_BASE_URL}/dashboard/link-questions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question_id: id,
+                target_id: targetId,
+                relation_type: relationType
+            })
+        });
+
+        if (response.ok) {
+            addLog(`Successfully linked as ${relationType}.`, 'success');
+            closeReportModal();
+            closeModal();
+            loadStats();
+        } else {
+            const err = await response.json();
+            addLog(`Linking failed: ${err.detail}`, 'error');
+        }
+    } catch (e) {
+        addLog(`Linking failed: ${e.message}`, 'error');
+    }
+}
+
+async function deleteQuestion(id) {
+    if (!confirm(`Are you sure you want to delete Question #${id}?`)) return;
+    addLog(`Deleting Question #${id}...`, 'process');
+    try {
+        const response = await fetch(`${API_BASE_URL}/questions/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            addLog(`Question #${id} deleted successfully.`, 'success');
+            closeReportModal();
+            closeModal();
+            loadStats();
+        } else {
+            const err = await response.json();
+            addLog(`Deletion failed: ${err.detail}`, 'error');
+        }
+    } catch (e) {
+        addLog(`Deletion failed: ${e.message}`, 'error');
+    }
+}
+
+// Export to window
+window.deleteQuestion = deleteQuestion;
+window.linkQuestion = linkQuestion;
+window.showDuplicateDetails = showDuplicateDetails;
+
 
 async function approveQuestions() {
     if (selectedQuestions.size === 0) return;

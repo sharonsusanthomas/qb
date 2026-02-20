@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
 from app.models.database import Question, QuestionStatus, DuplicateMatch
-from app.models.schemas import QuestionResponse, QuestionMetadata, DuplicateMatchResponse
+from app.models.schemas import (
+    QuestionResponse, 
+    QuestionMetadata, 
+    DuplicateMatchResponse,
+    LinkQuestionsRequest,
+    RelationType
+)
 from typing import List
 from pydantic import BaseModel
 
@@ -72,6 +78,8 @@ def get_questions_by_status(status: QuestionStatus, db: Session = Depends(get_db
                 difficulty=q.difficulty,
                 marks=q.marks
             ),
+            parent_id=q.parent_id,
+            parallel_group_id=q.parallel_group_id,
             created_at=q.created_at
         )
         for q in questions
@@ -152,6 +160,49 @@ def update_question_status(request: UpdateStatusRequest, db: Session = Depends(g
     log.success(f"Batch update successful. {len(questions)} questions updated.")
     
     return {"message": f"Successfully updated {len(questions)} questions to {request.new_status}", "count": len(questions)}
+
+
+@router.post("/link-questions")
+def link_questions(request: LinkQuestionsRequest, db: Session = Depends(get_db)):
+    """Manually link questions as Parent-Child or Parallel"""
+    question = db.query(Question).filter(Question.id == request.question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    if request.relation_type == RelationType.IGNORE:
+        # Just approve it and cleanup matches
+        question.status = QuestionStatus.APPROVED
+        db.query(DuplicateMatch).filter(DuplicateMatch.question_id == question.id).delete()
+        db.commit()
+        return {"message": "Question ignored and marked as Approved"}
+
+    target = db.query(Question).filter(Question.id == request.target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Target question not found")
+
+    if request.relation_type == RelationType.CHILD:
+        question.parent_id = target.id
+        question.status = QuestionStatus.APPROVED
+    
+    elif request.relation_type == RelationType.PARENT:
+        target.parent_id = question.id
+        question.status = QuestionStatus.APPROVED
+    
+    elif request.relation_type == RelationType.PARALLEL:
+        # Assign a common group ID. Use target's group if it exists, else create new.
+        if target.parallel_group_id:
+            question.parallel_group_id = target.parallel_group_id
+        else:
+            # Simple group ID generation: use the ID of the first question in the group
+            target.parallel_group_id = target.id
+            question.parallel_group_id = target.id
+        question.status = QuestionStatus.APPROVED
+
+    # Cleanup match records for this question once handled
+    db.query(DuplicateMatch).filter(DuplicateMatch.question_id == question.id).delete()
+    db.commit()
+    
+    return {"message": f"Successfully linked as {request.relation_type}"}
 
 
 @router.post("/approve")

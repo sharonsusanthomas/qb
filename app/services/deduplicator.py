@@ -57,12 +57,15 @@ class DeduplicationService:
         Q2: {q2}
 
         Decide:
-        - DUPLICATE
-        - CONFLICT
-        - UNIQUE
+        - DUPLICATE: For logical identity (even if words differ slightly)
+        - CONFLICT: Same question but with different answers or facts
+        - PARENT_OF: Q1 is a larger concept that fully contains Q2 (e.g., Q1: "Explain DBMS", Q2: "Define DBMS")
+        - CHILD_OF: Q1 is a subset/part of the larger concept in Q2
+        - PARALLEL_TO: Questions at the same level, alternative versions of similar topic (e.g., Q1: "TCP", Q2: "UDP")
+        - UNIQUE: Different topics or concepts
 
         Return ONLY JSON:
-        {{"verdict":"DUPLICATE|CONFLICT|UNIQUE","reason":"brief explanation"}}
+        {{"verdict":"DUPLICATE|CONFLICT|PARENT_OF|CHILD_OF|PARALLEL_TO|UNIQUE","reason":"brief explanation"}}
         """
         
         try:
@@ -134,8 +137,8 @@ class DeduplicationService:
                         "reason": "High semantic and numeric match",
                     }
 
-                # Save match if it's actually flagged as DUPLICATE or CONFLICT
-                if verdict_data["verdict"] in ["DUPLICATE", "CONFLICT"]:
+                # Save match if it's flagged as DUPLICATE, CONFLICT, or any RELATION
+                if verdict_data["verdict"] in ["DUPLICATE", "CONFLICT", "PARENT_OF", "CHILD_OF", "PARALLEL_TO"]:
                     match_data = {
                         "match_question_id": match_question.id,
                         "match_question_text": match_question.question_text,

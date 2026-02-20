@@ -111,6 +111,18 @@ class BatchPlanRequest(BaseModel):
         }
 
 
+class RelationType(str, Enum):
+    CHILD = "CHILD"
+    PARENT = "PARENT"
+    PARALLEL = "PARALLEL"
+    IGNORE = "IGNORE"
+
+class LinkQuestionsRequest(BaseModel):
+    question_id: int
+    target_id: Optional[int] = None
+    relation_type: RelationType
+
+
 # Response Schemas
 class QuestionMetadata(BaseModel):
     subject: str
@@ -125,7 +137,9 @@ class QuestionResponse(BaseModel):
     question_text: str
     status: QuestionStatus
     metadata: QuestionMetadata
-    course_outcomes: List[CourseOutcomeResponse] = []  # Add COs to response
+    course_outcomes: List[CourseOutcomeResponse] = []
+    parent_id: Optional[int] = None
+    parallel_group_id: Optional[int] = None
     created_at: datetime
     
     class Config:

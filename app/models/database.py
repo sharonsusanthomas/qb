@@ -49,10 +49,17 @@ class Question(Base):
     status = Column(Enum(QuestionStatus, native_enum=False), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
+    # New Relation Columns
+    parent_id = Column(Integer, ForeignKey("questions.id", ondelete="SET NULL"), nullable=True)
+    parallel_group_id = Column(Integer, nullable=True, index=True)
+
     # Relationships
     batch_questions = relationship("BatchQuestion", back_populates="question")
     duplicate_results = relationship("DuplicateMatch", foreign_keys="DuplicateMatch.question_id", back_populates="question")
     course_outcomes = relationship("CourseOutcome", secondary=question_course_outcomes, backref="questions")
+    
+    # Self-referential relationship for Hierarchy
+    children = relationship("Question", backref="parent", remote_side=[id])
 
 
 class DuplicateMatch(Base):

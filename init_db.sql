@@ -38,11 +38,16 @@ CREATE TABLE IF NOT EXISTS questions (
     question_text TEXT NOT NULL,
     status ENUM('DEDUPE_PENDING', 'DEDUPE_APPROVED', 'DUPLICATE_FLAGGED', 'APPROVED')
            DEFAULT 'DEDUPE_PENDING',
+    parent_id INT DEFAULT NULL,
+    parallel_group_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     INDEX idx_subject (subject),
     INDEX idx_topic (topic),
-    INDEX idx_bloom_difficulty (bloom_level, difficulty)
+    INDEX idx_bloom_difficulty (bloom_level, difficulty),
+    INDEX idx_parent (parent_id),
+    INDEX idx_parallel (parallel_group_id),
+    FOREIGN KEY (parent_id) REFERENCES questions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ---------------- DUPLICATE MATCHES ----------------
