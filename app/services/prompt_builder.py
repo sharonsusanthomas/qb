@@ -14,6 +14,9 @@ You must:
 - Produce output ONLY as the question text
 - Never include explanations unless explicitly asked
 - Never invent topics outside the given syllabus
+- Format mathematical equations, physical symbols, and chemical formulas using clean Unicode characters (e.g., H₂O, CO₂, x², ∑).
+- DO NOT use LaTeX formatting like $\\ce{{...}}$ or \\( ... \\) as the frontend does not support LaTeX rendering.
+- For chemical bonds, use standard dashes (e.g., CH₃-CH₂-OH, C=C).
 
 Generation Rules (Mandatory):
 
@@ -47,6 +50,7 @@ Generation Rules (Mandatory):
    - Do not generate answers
    - Do not mention Bloom's level in the question text
    - Do not include markdown or bullet points in output
+   - Ensure all equations/symbols heavily rely on LaTeX formatting.
 
 Generate one examination question strictly following the above constraints:"""
 
@@ -72,6 +76,9 @@ Mandatory Constraints:
 2. If the context does not contain enough information for the specific topic, focus on what is available in the context related to the subject.
 3. Follow the Bloom's Taxonomy level strictly.
 4. Output ONLY the question text. No answers, no explanations.
+5. Format mathematical equations, physical symbols, and chemical formulas using clean Unicode characters (e.g., H₂O, CO₂, x², ∑).
+6. DO NOT use LaTeX formatting like $\\ce{{...}}$ or \\( ... \\) as the frontend does not support LaTeX rendering.
+7. Do not include markdown or bullet points in output.
 
 Generate the question:"""
 

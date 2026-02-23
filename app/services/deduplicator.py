@@ -82,7 +82,7 @@ class DeduplicationService:
             logger.error(f"LLM reasoning failed: {e}")
             return {"verdict": "ERROR", "reason": str(e)}
 
-    def check_question(self, target_question: Question, sim_threshold=0.85):
+    def check_question(self, target_question: Question, sim_threshold=0.65):
         """
         Check a single question against all approved/deduped questions in the DB
         """
@@ -113,17 +113,21 @@ class DeduplicationService:
             score_val = score.item()
             if score_val >= sim_threshold:
                 match_question = existing_questions[i]
-                log.info(f"High similarity ({score_val*100:.0f}%) found with Question #{match_question.id}")
+                log.info(f"Similarity ({score_val*100:.0f}%) found with Question #{match_question.id}")
                 
-                # Layer 2: Lexical + Numeric check
-                ambiguous = self.check_layer2_ambiguity(
-                    target_question.question_text, 
-                    match_question.question_text, 
-                    score_val
-                )
+                # If score is below 0.85, it's not a direct duplicate but might be related
+                if score_val < 0.85:
+                    ambiguous = True
+                else:
+                    # Layer 2: Lexical + Numeric check for scores > 0.85
+                    ambiguous = self.check_layer2_ambiguity(
+                        target_question.question_text, 
+                        match_question.question_text, 
+                        score_val
+                    )
 
                 if ambiguous:
-                    log.process("Semantic match is high but text is different. Consulting AI Brain for a logical verdict...")
+                    log.process("Checking AI Brain for logical relation (Duplicate/Parallel/Hierarchy)...")
                     # Layer 3: LLM reasoning
                     verdict_data = self.call_agent_reasoning(
                         target_question.question_text, 
@@ -159,8 +163,13 @@ class DeduplicationService:
                     matches_found.append(match_data)
 
         # Automatic status update based on finding matches
+        has_true_dup = any(m["verdict"] in ["DUPLICATE", "CONFLICT"] for m in matches_found)
+        
         if matches_found:
-            log.error(f"Flagging Question #{target_question.id} as a DUPLICATE.")
+            if has_true_dup:
+                log.error(f"Flagging Question #{target_question.id} as a DUPLICATE.")
+            else:
+                log.warning(f"Flagging Question #{target_question.id} for RELATION review (Parallel/Child/Parent).")
             target_question.status = QuestionStatus.DUPLICATE_FLAGGED
         else:
             log.success(f"Question #{target_question.id} is UNIQUE. Moving to approval.")
