@@ -47,6 +47,19 @@ const pdfTopicSelect = document.getElementById('pdfTopic');
 const mSubjectSelect = document.getElementById('mSubject');
 const mTopicSelect = document.getElementById('mTopic');
 
+// Initialize Sun Editor
+const sunEditor = window.SUNEDITOR.create('mQuestionText', {
+    buttonList: [
+        ['undo', 'redo'],
+        ['bold', 'underline', 'italic', 'strike', 'subscript', 'superscript'],
+        ['list', 'align'],
+        ['fullScreen', 'showBlocks', 'codeView']
+    ],
+    width: '100%',
+    height: '200px',
+    placeholder: 'Type your physics or chemistry question here...'
+});
+
 // Helper to fill subject selects
 function populateSubjectSelects(data) {
     [subjectSelect, pdfSubjectSelect, mSubjectSelect].forEach(select => {
@@ -319,8 +332,23 @@ const manualLoader = manualSaveBtn.querySelector('.loader');
 manualForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Check if subject and topic are selected
+    if (!mSubjectSelect.value || !mTopicSelect.value) {
+        ui.showToast('Please select both a subject and a topic', 'warning');
+        return;
+    }
+
     const selectedSubject = mSubjectSelect.options[mSubjectSelect.selectedIndex].dataset.subjectName;
     const selectedTopic = mTopicSelect.options[mTopicSelect.selectedIndex].dataset.topicName;
+    const questionText = sunEditor.getContents();
+
+    // Basic length validation (matching backend min_length: 10)
+    // Strip HTML tags for length check
+    const plainText = questionText.replace(/<[^>]*>/g, '').trim();
+    if (plainText.length < 10) {
+        ui.showToast('Question text must be at least 10 characters long', 'warning');
+        return;
+    }
 
     const formData = {
         subject: selectedSubject,
@@ -329,7 +357,7 @@ manualForm.addEventListener('submit', async (e) => {
         difficulty: document.getElementById('mDifficulty').value,
         marks: parseInt(document.getElementById('mMarks').value || 15),
         course_outcome_ids: collectSelectedCOs('mCoList'),
-        question_text: document.getElementById('mQuestionText').value
+        question_text: questionText
     };
     await handleGeneration(`${API_BASE_URL}/questions/manual`, formData, manualSaveBtn, manualBtnText, manualLoader, false);
 });

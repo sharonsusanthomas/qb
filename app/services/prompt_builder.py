@@ -50,7 +50,7 @@ Generation Rules (Mandatory):
    - Do not generate answers
    - Do not mention Bloom's level in the question text
    - Do not include markdown or bullet points in output
-   - Ensure all equations/symbols heavily rely on LaTeX formatting.
+
 
 Generate one examination question strictly following the above constraints:"""
 
