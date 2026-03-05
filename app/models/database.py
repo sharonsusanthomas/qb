@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP, Float, Table
+from sqlalchemy import Column, Integer, String, Text, Enum, ForeignKey, TIMESTAMP, Float, Table, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -45,6 +45,7 @@ class Question(Base):
     bloom_level = Column(Enum(BloomLevel, native_enum=False), nullable=False, index=True)
     difficulty = Column(Enum(Difficulty, native_enum=False), nullable=False, index=True)
     marks = Column(Integer, nullable=False)
+    faculty_name = Column(String(255), nullable=True)
     question_text = Column(Text, nullable=False)
     status = Column(Enum(QuestionStatus, native_enum=False), nullable=False, default=QuestionStatus.DEDUPE_PENDING, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -100,3 +101,52 @@ class BatchQuestion(Base):
     # Relationships
     batch_plan = relationship("BatchPlan", back_populates="batch_questions")
     question = relationship("Question", back_populates="batch_questions")
+
+
+class FacultyPersona(Base):
+    __tablename__ = "faculty_personas"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    faculty_name = Column(String(255), nullable=False, unique=True, index=True)
+    
+    # JSON containing: {"rigor": 0.8, "practice": 0.2, "theory": 0.9}
+    style_weights = Column(JSON, nullable=True) 
+    
+    # JSON containing: {"always_use": ["...", "..."], "never_use": ["...", "..."]}
+    linguistic_thumbprint = Column(JSON, nullable=True)
+    
+    # Description of their scenario preferences
+    scenario_grounding = Column(Text, nullable=True)
+    
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relationships
+    golden_questions = relationship("GoldenQuestion", back_populates="persona", cascade="all, delete-orphan")
+    feedback_logs = relationship("FeedbackLog", back_populates="persona", cascade="all, delete-orphan")
+
+
+class GoldenQuestion(Base):
+    __tablename__ = "golden_questions"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    faculty_persona_id = Column(Integer, ForeignKey("faculty_personas.id", ondelete="CASCADE"), nullable=False)
+    question_text = Column(Text, nullable=False)
+    subject = Column(String(255), nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relationships
+    persona = relationship("FacultyPersona", back_populates="golden_questions")
+
+
+class FeedbackLog(Base):
+    __tablename__ = "feedback_logs"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    faculty_persona_id = Column(Integer, ForeignKey("faculty_personas.id", ondelete="CASCADE"), nullable=False)
+    original_text = Column(Text, nullable=False)
+    corrected_text = Column(Text, nullable=False)
+    critique = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relationships
+    persona = relationship("FacultyPersona", back_populates="feedback_logs")

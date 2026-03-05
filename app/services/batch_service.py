@@ -41,7 +41,8 @@ class BatchService:
                 topic=question_spec.topic,
                 bloom_level=question_spec.bloom_level,
                 difficulty=question_spec.difficulty,
-                marks=question_spec.marks
+                marks=question_spec.marks,
+                faculty_name=request.faculty_name
             )
             
             # Generate question

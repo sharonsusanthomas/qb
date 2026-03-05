@@ -15,43 +15,39 @@ class QuestionValidator:
         marks: int
     ) -> tuple[bool, str]:
         """
-        Validate a generated question
-        
-        Args:
-            question_text: The generated question
-            bloom_level: Expected Bloom's level
-            marks: Expected marks
-            
-        Returns:
-            Tuple of (is_valid, validation_message)
+        Validate a generated question for quality and academic rigor
         """
         # Basic validation
-        if not question_text or len(question_text.strip()) < 10:
+        text_clean = question_text.strip()
+        if not text_clean or len(text_clean) < 15:
             return False, "Question is too short"
         
-        # Check for question mark (most questions should have one)
-        if "?" not in question_text and not any(
-            verb in question_text.lower() 
-            for verb in ["explain", "describe", "discuss", "analyze", "evaluate", "design"]
-        ):
-            return False, "Question doesn't appear to be properly formatted"
-        
+        # Check for conversational filler (typical of bad LLM outputs)
+        bad_starters = ["here is", "surely", "i can", "this is", "question:"]
+        if any(text_clean.lower().startswith(bad) for bad in bad_starters):
+            return False, "Question contains conversational filler"
+
         # Check for appropriate Bloom's verbs
         expected_verbs = self.prompt_builder.get_bloom_verbs(bloom_level)
-        has_appropriate_verb = any(
-            verb in question_text.lower() 
-            for verb in expected_verbs
-        )
+        lower_q = text_clean.lower()
+        has_appropriate_verb = any(verb in lower_q for verb in expected_verbs)
         
-        # Relaxed validation - just warn, don't fail
+        # Rigor Check: For marks > 5, avoid simple "What is" or "Define"
+        if marks > 5:
+            forbidden_starters = ["what is", "define", "list the", "state the"]
+            if any(lower_q.startswith(forbidden) for forbidden in forbidden_starters):
+                return False, f"Question is too simplistic for {marks} marks. Use analytical phrasing."
+
+        # Depth Check: Higher marks should imply structural complexity
+        if marks >= 10 and not any(kw in lower_q for kw in ["explain", "analyze", "evaluate", "compare", "design", "illustrate", "derive", "case", "scenario"]):
+            return False, f"University-level {marks}-mark questions require analytical depth (e.g., 'Analyze', 'Compare')."
+
+        # Heuristic length check
+        min_length = marks * 4 
+        if len(text_clean) < min_length:
+            return False, f"Question content seems insufficient for {marks} marks."
+        
         if not has_appropriate_verb:
-            validation_message = f"Warning: Question may not use appropriate {bloom_level.value} verbs"
-        else:
-            validation_message = "Question validated successfully"
-        
-        # Check length vs marks
-        min_length = marks * 5  # Rough heuristic: 5 chars per mark
-        if len(question_text) < min_length:
-            return False, f"Question seems too short for {marks} marks"
-        
-        return True, validation_message
+            return True, f"Warning: Question may not strictly use {bloom_level.value} action verbs."
+            
+        return True, "Question validated successfully"

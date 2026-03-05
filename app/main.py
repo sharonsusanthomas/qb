@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.database import engine, Base
 from fastapi.staticfiles import StaticFiles
-from app.api import questions, batch, metadata, dashboard, upload
+from app.api import questions, batch, metadata, dashboard, upload, faculty
 
 from app.core.limiter import limiter
 
@@ -35,6 +35,7 @@ app.include_router(batch.router)
 app.include_router(metadata.router)
 app.include_router(dashboard.router)
 app.include_router(upload.router)
+app.include_router(faculty.router)
 
 # Mount frontend
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")

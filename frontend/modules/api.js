@@ -41,3 +41,37 @@ export async function getTopics(subjectId) {
 export async function getCourseOutcomes(subjectId) {
     return await apiRequest(`/metadata/subjects/${subjectId}/course_outcomes`);
 }
+
+export async function getFacultyPersonas() {
+    return await apiRequest('/faculty/personas');
+}
+
+export async function createPersona(data) {
+    return await apiRequest('/faculty/personas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+}
+
+export async function addGoldenQuestion(id, data) {
+    return await apiRequest(`/faculty/personas/${id}/examples`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+}
+
+export async function analyzePersona(id) {
+    return await apiRequest(`/faculty/personas/${id}/analyze`, {
+        method: 'POST'
+    });
+}
+
+export async function addFeedback(id, data) {
+    return await apiRequest(`/faculty/personas/${id}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+}

@@ -1,64 +1,48 @@
 from app.models.schemas import BloomLevel, Difficulty
 
 
-CANONICAL_PROMPT_TEMPLATE = """You are an Academic Question Generation Engine designed for higher-education institutions.
+CANONICAL_PROMPT_TEMPLATE = """You are a Senior University Professor and Subject Matter Expert.
+Your goal is to design rigorous examination questions for a Bachelor's/Master's degree program.
 
-Your role is to generate syllabus-aligned, Bloom's Taxonomy–compliant examination questions.
+{faculty_context}
 
-You must:
-- Strictly follow provided academic constraints
-- Generate only one question per request
-- Use appropriate Bloom's action verbs
-- Respect marks, difficulty, and subject domain
-- Avoid vague, ambiguous, or opinion-based questions
-- Produce output ONLY as the question text
-- Never include explanations unless explicitly asked
-- Never invent topics outside the given syllabus
+Role Constraints:
+- Generate syllabus-aligned, Bloom's Taxonomy–compliant questions.
+- For marks > 5: Avoid simple "What is" or "Define" questions. Instead, use scenario-based, analytical, or comparative phrasing.
+- Ensure the technical depth matches a University curriculum, not high school level.
+- Use appropriate academic terminology specific to the domain.
+
+Formatting Rules:
 - Format mathematical equations, physical symbols, and chemical formulas using clean Unicode characters (e.g., H₂O, CO₂, x², ∑).
-- DO NOT use LaTeX formatting like $\\ce{{...}}$ or \\( ... \\) as the frontend does not support LaTeX rendering.
-- For chemical bonds, use standard dashes (e.g., CH₃-CH₂-OH, C=C).
+- DO NOT use LaTeX formatting like $\ce{{...}}$ or \( ... \).
+- Use standard dashes for chemical bonds (e.g., CH₃-CH₂-OH).
 
-Generation Rules (Mandatory):
+Generation Requirements:
+- Subject: {subject}
+- Topic: {topic}
+- Bloom's Level: {bloom_level}
+- Marks: {marks}
+- Difficulty: {difficulty}
 
-1. Question must align exactly with:
-   - Subject: {subject}
-   - Topic: {topic}
-   - Bloom's Taxonomy (RBT) level: {bloom_level}
-   - Marks: {marks}
-   - Difficulty level: {difficulty}
+Bloom's Taxonomy Enforcement:
+- RBT 1 (Remember): state, list, identify (Use ONLY for < 5 marks)
+- RBT 2 (Understand): explain, describe, summarize (Use for introductory concepts)
+- RBT 3 (Apply): solve, compute, implement (Require numerical or procedural application)
+- RBT 4 (Analyze): analyze, differentiate, compare, contrast (Require breaking down concepts)
+- RBT 5 (Evaluate): justify, evaluate, critique, assess (Require judgment and evidence)
+- RBT 6 (Create): design, propose, construct, formulate (Require original composition)
 
-2. Bloom's Taxonomy Enforcement:
-   - RBT 1 (Remember): define, list, state, identify
-   - RBT 2 (Understand): explain, describe, summarize
-   - RBT 3 (Apply): apply, solve, compute
-   - RBT 4 (Analyze): analyze, differentiate, compare
-   - RBT 5 (Evaluate): justify, evaluate, critique
-   - RBT 6 (Create): design, propose, construct
+Output ONLY the question text. Do not provide labels, marks, or headers.
 
-3. Marks vs Depth:
-   - 2–5 marks → short, direct questions
-   - 10–15 marks → descriptive, analytical, or design-oriented
-   - 15+ marks → multi-part or scenario-based questions
-
-4. Difficulty Levels:
-   - Easy: direct recall or simple understanding
-   - Medium: application or explanation with reasoning
-   - Hard: analysis, evaluation, or creation with justification
-
-5. Output Constraints:
-   - Generate exactly ONE question
-   - Do not generate answers
-   - Do not mention Bloom's level in the question text
-   - Do not include markdown or bullet points in output
-
-
-Generate one examination question strictly following the above constraints:"""
+Generate the question:"""
 
 
 
 CONTEXT_PROMPT_TEMPLATE = """You are an Academic Question Generation Engine.
 
 Your task is to generate ONE examination question based STRICTLY on the provided study notes/context.
+
+{faculty_context}
 
 Context:
 {context}
@@ -92,7 +76,8 @@ class PromptBuilder:
         topic: str,
         bloom_level: BloomLevel,
         difficulty: Difficulty,
-        marks: int
+        marks: int,
+        faculty_context: str = ""
     ) -> str:
         """Build a canonical prompt for question generation"""
         return CANONICAL_PROMPT_TEMPLATE.format(
@@ -100,7 +85,8 @@ class PromptBuilder:
             topic=topic,
             bloom_level=bloom_level.value,
             difficulty=difficulty.value,
-            marks=marks
+            marks=marks,
+            faculty_context=faculty_context
         )
 
     @staticmethod
@@ -111,7 +97,8 @@ class PromptBuilder:
         bloom_level: BloomLevel,
         difficulty: Difficulty,
         marks: int,
-        custom_prompt: str = ""
+        custom_prompt: str = "",
+        faculty_context: str = ""
     ) -> str:
         """Build a prompt for question generation from context"""
         # Truncate context if too long (rough safety limit)
@@ -125,7 +112,8 @@ class PromptBuilder:
             bloom_level=bloom_level.value,
             difficulty=difficulty.value,
             marks=marks,
-            custom_prompt=custom_prompt
+            custom_prompt=custom_prompt,
+            faculty_context=faculty_context
         )
 
     

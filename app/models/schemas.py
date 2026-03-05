@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
 
@@ -63,6 +63,7 @@ class QuestionGenerateRequest(BaseModel):
     marks: int = Field(..., ge=1, le=100, description="Marks for the question")
     count: int = Field(default=1, ge=1, le=10, description="Number of questions to generate")
     course_outcome_ids: List[int] = Field(default=[], description="List of Course Outcome IDs")
+    faculty_name: Optional[str] = Field(None, description="Optional faculty name to apply persona styling")
     
     class Config:
         json_schema_extra = {
@@ -71,7 +72,8 @@ class QuestionGenerateRequest(BaseModel):
                 "topic": "Arrays",
                 "bloom_level": "RBT2",
                 "difficulty": "MEDIUM",
-                "marks": 15
+                "marks": 15,
+                "faculty_name": "Dr. Smith"
             }
         }
 
@@ -84,6 +86,7 @@ class QuestionManualRequest(BaseModel):
     marks: int = Field(..., description="Marks")
     question_text: str = Field(..., min_length=10, description="The content of the question")
     course_outcome_ids: List[int] = Field(default=[], description="List of Course Outcome IDs")
+    faculty_name: Optional[str] = Field(None, description="Optional faculty name")
 
 
 class BatchQuestionSpec(BaseModel):
@@ -97,6 +100,7 @@ class BatchPlanRequest(BaseModel):
     plan_name: str = Field(..., min_length=1, max_length=255)
     subject: str = Field(..., min_length=1, max_length=255)
     questions: List[BatchQuestionSpec] = Field(..., min_items=1)
+    faculty_name: Optional[str] = Field(None, description="Optional faculty name for styling")
     
     class Config:
         json_schema_extra = {
@@ -111,6 +115,13 @@ class BatchPlanRequest(BaseModel):
         }
 
 
+class QuestionUpdateRequest(BaseModel):
+    question_text: str = Field(..., min_length=10)
+    bloom_level: Optional[BloomLevel] = None
+    difficulty: Optional[Difficulty] = None
+    marks: Optional[int] = None
+
+
 class RelationType(str, Enum):
     CHILD = "CHILD"
     PARENT = "PARENT"
@@ -123,6 +134,54 @@ class LinkQuestionsRequest(BaseModel):
     relation_type: RelationType
 
 
+# Faculty Persona Schemas
+class FacultyPersonaCreate(BaseModel):
+    faculty_name: str
+    style_weights: Optional[Dict[str, Any]] = None
+    linguistic_thumbprint: Optional[Dict[str, Any]] = None
+    scenario_grounding: Optional[str] = None
+
+class GoldenQuestionCreate(BaseModel):
+    question_text: str
+    subject: Optional[str] = None
+
+class GoldenQuestionResponse(BaseModel):
+    id: int
+    faculty_persona_id: int
+    question_text: str
+    subject: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class FeedbackLogCreate(BaseModel):
+    original_text: str
+    corrected_text: str
+    critique: Optional[str] = None
+
+class FeedbackLogResponse(BaseModel):
+    id: int
+    faculty_persona_id: int
+    original_text: str
+    corrected_text: str
+    critique: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class FacultyPersonaResponse(BaseModel):
+    id: int
+    faculty_name: str
+    style_weights: Optional[Dict[str, Any]] = None
+    linguistic_thumbprint: Optional[Dict[str, Any]] = None
+    scenario_grounding: Optional[str] = None
+    golden_questions: List[GoldenQuestionResponse] = []
+    feedback_logs: List[FeedbackLogResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+
 # Response Schemas
 class QuestionMetadata(BaseModel):
     subject: str
@@ -130,6 +189,7 @@ class QuestionMetadata(BaseModel):
     bloom_level: BloomLevel
     difficulty: Difficulty
     marks: int
+    faculty: Optional[str] = None
 
 
 class QuestionResponse(BaseModel):

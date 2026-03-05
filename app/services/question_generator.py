@@ -1,11 +1,12 @@
 import logging
 from sqlalchemy.orm import Session
-from app.models.database import Question
+from app.models.database import Question, FacultyPersona, GoldenQuestion, FeedbackLog
 from app.models.subject_topic import CourseOutcome
 from app.models.schemas import (
     QuestionGenerateRequest,
     QuestionResponse,
-    QuestionMetadata
+    QuestionMetadata,
+    QuestionUpdateRequest
 )
 from app.services.prompt_builder import PromptBuilder
 from app.services.llm_client import llm_client
@@ -21,13 +22,56 @@ class QuestionGeneratorService:
         self.db = db
         self.prompt_builder = PromptBuilder()
         self.validator = QuestionValidator()
+        
+    def _build_faculty_context(self, faculty_name: str | None) -> str:
+        if not faculty_name:
+            return ""
+            
+        persona = self.db.query(FacultyPersona).filter(FacultyPersona.faculty_name == faculty_name).first()
+        if not persona:
+            logger.warning(f"Faculty persona '{faculty_name}' not found. Using generic persona.")
+            return ""
+            
+        context_parts = [f"INSTRUCTION: You must adopt the teaching persona of {persona.faculty_name}."]
+        
+        if persona.style_weights:
+            weights = ", ".join([f"{k}: {v}" for k, v in persona.style_weights.items()])
+            context_parts.append(f"Style preferences (0-1 scale): {weights}.")
+            
+        if persona.linguistic_thumbprint:
+            always = persona.linguistic_thumbprint.get("always_use", [])
+            never = persona.linguistic_thumbprint.get("never_use", [])
+            if always:
+                context_parts.append(f"Phrases/concepts to always integrate: {', '.join(always)}.")
+            if never:
+                context_parts.append(f"Phrases/concepts to AVOID: {', '.join(never)}.")
+                
+        if persona.scenario_grounding:
+            context_parts.append(f"Typical scenario grounding: {persona.scenario_grounding}.")
+            
+        # Add a couple of Golden Questions as examples
+        if persona.golden_questions:
+            examples = [q.question_text for q in persona.golden_questions[:2]]
+            ex_str = "\n".join([f"- {ex}" for ex in examples])
+            context_parts.append(f"Here are examples of 'perfect' questions by this faculty:\n{ex_str}")
+            
+        # Add Feedback / Anti-patterns
+        if persona.feedback_logs:
+            lessons = [f"Avoid: '{f.original_text}' -> Use instead: '{f.corrected_text}' (Why: {f.critique})" for f in persona.feedback_logs[:3]]
+            lesson_str = "\n".join([f"- {l}" for l in lessons])
+            context_parts.append(f"IMPORTANT Lessons learned from past feedback:\n{lesson_str}")
+            
+        return "\n\n".join(context_parts)
     
     def generate_questions(self, request: QuestionGenerateRequest) -> list[QuestionResponse]:
         """
         Generate multiple questions based on the request parameters
         """
         count = getattr(request, 'count', 1)
+        faculty_name = getattr(request, 'faculty_name', None)
         logger.info(f"Starting batch generation of {count} questions for subject: {request.subject}, topic: {request.topic}")
+        
+        faculty_context_str = self._build_faculty_context(faculty_name)
         
         responses = []
         for i in range(count):
@@ -39,7 +83,8 @@ class QuestionGeneratorService:
                 topic=request.topic,
                 bloom_level=request.bloom_level,
                 difficulty=request.difficulty,
-                marks=request.marks
+                marks=request.marks,
+                faculty_context=faculty_context_str
             )
             
             # If generating multiple, add a hint for variety
@@ -68,16 +113,17 @@ class QuestionGeneratorService:
             )
             
             if not is_valid:
-                logger.warning(f"Validation failed for question {i+1}: {validation_message}. Retrying...")
-                question_text = llm_client.generate(prompt + "\n\nIMPORTANT: Previous attempt failed validation. Please ensure strict adherence to Bloom's Taxonomy and marks constraints.")
+                logger.warning(f"Validation failed for question {i+1}: {validation_message}. Retrying with feedback...")
+                retry_prompt = prompt + f"\n\nERROR IN PREVIOUS ATTEMPT: {validation_message}\nFIX: Please reconstruct the question to be more rigorous, avoiding simplistic recall verbs and ensuring University-level depth."
+                question_text = llm_client.generate(retry_prompt)
             
-            # Save to database
             db_question = Question(
                 subject=request.subject,
                 topic=request.topic,
                 bloom_level=request.bloom_level,
                 difficulty=request.difficulty,
                 marks=request.marks,
+                faculty_name=faculty_name,
                 question_text=question_text
             )
             
@@ -98,13 +144,23 @@ class QuestionGeneratorService:
                     topic=db_question.topic,
                     bloom_level=db_question.bloom_level,
                     difficulty=db_question.difficulty,
-                    marks=db_question.marks
+                    marks=db_question.marks,
+                    faculty=db_question.faculty_name
                 ),
                 course_outcomes=db_question.course_outcomes,
                 created_at=db_question.created_at
             ))
             
         return responses
+
+    def generate_question(self, request: QuestionGenerateRequest) -> QuestionResponse:
+        """
+        Generate a single question.
+        This is a convenience wrapper around generate_questions.
+        """
+        request.count = 1
+        results = self.generate_questions(request)
+        return results[0]
 
     def generate_questions_from_context(
         self, 
@@ -116,7 +172,10 @@ class QuestionGeneratorService:
         Generate multiple questions based on provided context text
         """
         count = getattr(request, 'count', 1)
+        faculty_name = getattr(request, 'faculty_name', None)
         logger.info(f"Starting batch context generation of {count} questions for subject: {request.subject}")
+        
+        faculty_context_str = self._build_faculty_context(faculty_name)
         
         responses = []
         for i in range(count):
@@ -130,7 +189,8 @@ class QuestionGeneratorService:
                 bloom_level=request.bloom_level,
                 difficulty=request.difficulty,
                 marks=request.marks,
-                custom_prompt=custom_prompt
+                custom_prompt=custom_prompt,
+                faculty_context=faculty_context_str
             )
             
             if count > 1:
@@ -157,16 +217,17 @@ class QuestionGeneratorService:
             )
             
             if not is_valid:
-                logger.warning(f"Context validation failed for question {i+1}. Retrying...")
-                question_text = llm_client.generate(prompt)
+                logger.warning(f"Context validation failed for question {i+1}: {validation_message}. Retrying with feedback...")
+                retry_prompt = prompt + f"\n\nERROR IN PREVIOUS ATTEMPT: {validation_message}\nFIX: Align strictly with the context while maintaining requested academic rigor."
+                question_text = llm_client.generate(retry_prompt)
             
-            # Save to database
             db_question = Question(
                 subject=request.subject,
                 topic=request.topic,
                 bloom_level=request.bloom_level,
                 difficulty=request.difficulty,
                 marks=request.marks,
+                faculty_name=faculty_name,
                 question_text=question_text
             )
             
@@ -187,7 +248,8 @@ class QuestionGeneratorService:
                     topic=db_question.topic,
                     bloom_level=db_question.bloom_level,
                     difficulty=db_question.difficulty,
-                    marks=db_question.marks
+                    marks=db_question.marks,
+                    faculty=db_question.faculty_name
                 ),
                 course_outcomes=db_question.course_outcomes,
                 created_at=db_question.created_at
@@ -216,6 +278,25 @@ class QuestionGeneratorService:
             course_outcomes=question.course_outcomes,
             created_at=question.created_at
         )
+    
+    def update_question(self, question_id: int, update_data: QuestionUpdateRequest) -> QuestionResponse | None:
+        """Update an existing question's content or metadata"""
+        db_question = self.db.query(Question).filter(Question.id == question_id).first()
+        if not db_question:
+            return None
+        
+        db_question.question_text = update_data.question_text
+        if update_data.bloom_level:
+            db_question.bloom_level = update_data.bloom_level
+        if update_data.difficulty:
+            db_question.difficulty = update_data.difficulty
+        if update_data.marks:
+            db_question.marks = update_data.marks
+            
+        self.db.commit()
+        self.db.refresh(db_question)
+        
+        return self.get_question_by_id(db_question.id)
     
     def list_questions(
         self,

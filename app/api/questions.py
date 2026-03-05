@@ -7,10 +7,11 @@ from app.models.schemas import (
     QuestionManualRequest,
     QuestionResponse,
     QuestionListResponse,
-    CourseOutcomeResponse
+    CourseOutcomeResponse,
+    QuestionUpdateRequest
 )
 from app.services.question_generator import QuestionGeneratorService
-from app.models.database import Question, QuestionStatus # Add Question and Status to use manually
+from app.models.database import Question, QuestionStatus, DuplicateMatch, BatchQuestion
 from app.models.subject_topic import CourseOutcome
 
 router = APIRouter(prefix="/api/v1/questions", tags=["Questions"])
@@ -29,6 +30,7 @@ def add_manual_question(
         bloom_level=request.bloom_level,
         difficulty=request.difficulty,
         marks=request.marks,
+        faculty_name=request.faculty_name,
         status=QuestionStatus.DEDUPE_PENDING
     )
     db.add(new_question)
@@ -53,7 +55,8 @@ def add_manual_question(
             topic=new_question.topic,
             bloom_level=new_question.bloom_level,
             difficulty=new_question.difficulty,
-            marks=new_question.marks
+            marks=new_question.marks,
+            faculty=new_question.faculty_name
         ),
         course_outcomes=new_question.course_outcomes,
         created_at=new_question.created_at
@@ -125,6 +128,21 @@ def list_questions(
         total=len(questions)
     )
 
+@router.put("/{question_id}", response_model=QuestionResponse)
+def update_question(
+    question_id: int,
+    request: QuestionUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """Update a question's text or metadata"""
+    service = QuestionGeneratorService(db)
+    question = service.update_question(question_id, request)
+    
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    return question
+
 @router.delete("/{question_id}", status_code=204)
 def delete_question(
     question_id: int,
@@ -134,6 +152,15 @@ def delete_question(
     question = db.query(Question).filter(Question.id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Delete related DuplicateMatch records first (both sides of the relationship)
+    db.query(DuplicateMatch).filter(
+        (DuplicateMatch.question_id == question_id) |
+        (DuplicateMatch.match_question_id == question_id)
+    ).delete(synchronize_session=False)
+
+    # Delete related BatchQuestion records
+    db.query(BatchQuestion).filter(BatchQuestion.question_id == question_id).delete(synchronize_session=False)
     
     db.delete(question)
     db.commit()

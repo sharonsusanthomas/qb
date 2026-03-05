@@ -6,13 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Question Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Content Rendering Libraries -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+    <!-- Sun Editor (Rich Text) -->
+    <link href="https://cdn.jsdelivr.net/npm/suneditor@latest/dist/css/suneditor.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/suneditor@latest/dist/suneditor.min.js"></script>
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>📊 Question Dashboard</h1>
-            <p>Manage and review generated questions</p>
+            <h1>Question <span class="rotating-text-wrapper" id="rotatingText">
+                    <span class="rotating-word active"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Dashboard</span>
+                    <span class="rotating-word"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analytics</span>
+                    <span class="rotating-word"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Control</span>
+                </span></h1>
+            <p>Manage, review, and <span style="color: var(--primary); font-weight: 600;">optimize</span> your generated
+                questions.</p>
             <nav>
                 <a href="index.html" class="nav-link">Generate Questions</a>
                 <a href="dashboard.html" class="nav-link active">Dashboard</a>

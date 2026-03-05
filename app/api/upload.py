@@ -28,6 +28,7 @@ async def generate_from_notes(
     count: int = Form(default=1),
     course_outcome_ids: list[int] = Form(default=[]),
     custom_prompt: str = Form(default=""),
+    faculty_name: str = Form(default=None),
     db: Session = Depends(get_db)
 ):
     """
@@ -57,7 +58,8 @@ async def generate_from_notes(
             difficulty=Difficulty(difficulty),
             marks=marks,
             count=count,
-            course_outcome_ids=course_outcome_ids
+            course_outcome_ids=course_outcome_ids,
+            faculty_name=faculty_name
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid parameters: {str(e)}")

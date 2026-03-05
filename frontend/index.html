@@ -22,8 +22,18 @@
 <body>
     <div class="container">
         <header>
-            <h1>📚 Academic Question Generator</h1>
-            <p>Generate Bloom's Taxonomy-compliant examination questions</p>
+            <h1>Academic <span class="rotating-text-wrapper" id="rotatingText">
+                    <span class="rotating-word active"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Question</span>
+                    <span class="rotating-word"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Exam</span>
+                    <span class="rotating-word"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Quiz</span>
+                    <span class="rotating-word"
+                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Blueprint</span>
+                </span> Generator</h1>
+            <p>Empowering educators with <span style="color: var(--primary); font-weight: 600;">AI-driven</span>
+                Bloom-optimized assessments.</p>
             <nav>
                 <a href="index.html" class="nav-link active">Generate Questions</a>
                 <a href="dashboard.html" class="nav-link">Dashboard</a>
@@ -39,6 +49,7 @@
                     <button class="tab-btn active" onclick="switchTab('standard')">Standard Mode</button>
                     <button class="tab-btn" onclick="switchTab('context')">Files & Notes Mode</button>
                     <button class="tab-btn" onclick="switchTab('manual')">Manual Input Mode</button>
+                    <button class="tab-btn faculty-tab-btn" onclick="switchTab('faculty')">Faculty Personas ✨</button>
                 </div>
 
                 <!-- Standard Form -->
@@ -55,6 +66,13 @@
                             <label for="topic">Topic *</label>
                             <select id="topic" required disabled>
                                 <option value="">Select a subject first</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="faculty">Faculty Persona (Optional)</label>
+                            <select id="faculty">
+                                <option value="">Default (Generic Style)</option>
                             </select>
                         </div>
 
@@ -137,6 +155,13 @@
                             </div>
                         </div>
 
+                        <div class="form-group">
+                            <label for="pdfFaculty">Faculty Persona (Optional)</label>
+                            <select id="pdfFaculty">
+                                <option value="">Default (Generic Style)</option>
+                            </select>
+                        </div>
+
                         <!-- Course Outcomes -->
                         <div class="co-container" id="pdfCoContainer">
                             <label>Course Outcomes</label>
@@ -215,6 +240,13 @@
                             </div>
                         </div>
 
+                        <div class="form-group">
+                            <label for="mFaculty">Faculty Persona (Optional)</label>
+                            <select id="mFaculty">
+                                <option value="">Default (Generic Style)</option>
+                            </select>
+                        </div>
+
                         <!-- Course Outcomes -->
                         <div class="co-container" id="mCoContainer">
                             <label>Course Outcomes</label>
@@ -270,6 +302,70 @@
                         </button>
                     </form>
                 </div>
+
+                <!-- Faculty Management Mode -->
+                <div id="facultyMode" class="tab-content">
+                    <div class="faculty-management-grid">
+                        <div class="persona-panel card-inner">
+                            <h3>Manage Personas</h3>
+                            <form id="personaForm" class="compact-form">
+                                <div class="form-group">
+                                    <label for="newFacultyName">Faculty Name</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="text" id="newFacultyName" placeholder="e.g. Dr. Satish" required>
+                                        <button type="submit" class="btn-primary"
+                                            style="width: auto; padding: 0.5rem 1rem;">Create</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="persona-list" id="personaList">
+                                <p class="text-muted">Loading personas...</p>
+                            </div>
+                        </div>
+
+                        <div class="analysis-panel card-inner" id="personaDetailsPanel" style="display: none;">
+                            <div class="panel-header">
+                                <h3 id="activePersonaName">Faculty Name</h3>
+                                <button class="btn-secondary" id="analyzeBtn" onclick="runStyleAnalysis()">
+                                    <span class="btn-text">✨ Analyze Style</span>
+                                    <span class="loader" style="display: none;"></span>
+                                </button>
+                            </div>
+
+                            <div class="style-metrics-grid">
+                                <div class="metric-card">
+                                    <label>Rigor</label>
+                                    <div class="progress-bar">
+                                        <div id="rigorProgress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="metric-card">
+                                    <label>Practice</label>
+                                    <div class="progress-bar">
+                                        <div id="practiceProgress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="metric-card">
+                                    <label>Theory</label>
+                                    <div class="progress-bar">
+                                        <div id="theoryProgress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="golden-questions-section">
+                                <h4>Golden Questions (Examples)</h4>
+                                <form id="goldenQuestionForm" class="compact-form">
+                                    <textarea id="goldenQuestionText"
+                                        placeholder="Paste a sample question this faculty wrote..." required></textarea>
+                                    <button type="submit" class="btn-secondary"
+                                        style="width: 100%; margin-top: 0.5rem;">Add Example</button>
+                                </form>
+                                <div id="goldenQuestionsList" class="compact-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Generated Question Display -->
@@ -301,6 +397,44 @@
             <p>Powered by Groq LLM • <a href="http://127.0.0.1:8000/docs" target="_blank">API Docs</a></p>
         </footer>
         <div id="toastContainer"></div>
+
+        <!-- Critique Modal -->
+        <div id="critiqueModal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>Faculty Feedback & Critique</h2>
+                    <span class="close" onclick="closeCritiqueModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="critiqueForm">
+                        <input type="hidden" id="critiqueQuestionId">
+                        <div class="form-group">
+                            <label>Original Generated Text</label>
+                            <div id="critiqueOriginalText" class="golden-item"
+                                style="max-height: 150px; overflow-y: auto; margin-bottom: 1rem;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="critiqueCorrectedText">How would you write it? (Optional)</label>
+                            <textarea id="critiqueCorrectedText"
+                                placeholder="Provide a better version of this question..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="critiqueReason">What was wrong? (Critique)</label>
+                            <textarea id="critiqueReason"
+                                placeholder="e.g. Too simple, not practical enough, used wrong terminology..."
+                                required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="feedbackFacultyName">Which Persona should learn this?</label>
+                            <select id="feedbackFacultyName" required>
+                                <option value="">Select Persona</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 1rem;">Submit Feedback</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="script.js"></script>
